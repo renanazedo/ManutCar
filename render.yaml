@@ -1,0 +1,54 @@
+services:
+  # ---------------------------------------------------------------------------
+  # BACKEND API (FastAPI)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: manutcar-api
+    runtime: docker
+    repo: https://github.com/seu-usuario/manutcar
+    dockerfilePath: ./apps/api/Dockerfile
+    plan: free
+    region: oregon # ou frankfurt, singapore
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Definir manualmente no Dashboard Render (Secret)
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        value: manutcar-dev
+      - key: R2_PUBLIC_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FCM_SERVICE_ACCOUNT_JSON_BASE64
+        sync: false
+      - key: SETTINGS_TZ
+        value: America/Sao_Paulo
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: API_CORS_ORIGINS
+        value: "https://manutcar.vercel.app" # Atualizar para domínio Vercel real
+
+  # ---------------------------------------------------------------------------
+  # BANCO DE DADOS (NEON) - Gerenciado externamente, não no Render.
+  # Mantido aqui apenas para referência de conexão interna se necessário.
+  # ---------------------------------------------------------------------------
+  # databases:
+  #   - name: manutcar-db
+  #     plan: free
+  #     ipAllowList: [] # Acesso público necessário para Neon/Render Free
+
+# ---------------------------------------------------------------------------
+# NOTA: Frontend (Next.js) é deployado na Vercel, não no Render.
+# ---------------------------------------------------------------------------

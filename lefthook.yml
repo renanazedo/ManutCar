@@ -1,0 +1,55 @@
+# Lefthook Configuration
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    # Backend (Python) - Ruff & MyPy
+    backend-ruff:
+      glob: "apps/api/**/*.py"
+      run: cd apps/api && uv run ruff check . --fix
+    backend-mypy:
+      glob: "apps/api/**/*.py"
+      run: cd apps/api && uv run mypy app
+    backend-ruff-format:
+      glob: "apps/api/**/*.py"
+      run: cd apps/api && uv run ruff format .
+
+    # Frontend (TypeScript/Next.js) - ESLint & TypeCheck
+    frontend-lint:
+      glob: "apps/web/**/*.{ts,tsx,js,jsx}"
+      run: cd apps/web && pnpm lint
+    frontend-typecheck:
+      glob: "apps/web/**/*.{ts,tsx}"
+      run: cd apps/web && pnpm typecheck
+    frontend-prettier:
+      glob: "apps/web/**/*.{ts,tsx,json,css,md}"
+      run: cd apps/web && pnpm prettier --write .
+
+    # Shared Packages - Lint/Typecheck
+    packages-lint:
+      glob: "packages/**/*.{ts,tsx,js,jsx,py}"
+      run: |
+        if [ -f "packages/db/pyproject.toml" ]; then cd packages/db && uv run ruff check . --fix && uv run mypy src; fi
+        if [ -f "packages/schemas/pyproject.toml" ]; then cd packages/schemas && uv run ruff check . --fix && uv run mypy src; fi
+        if [ -f "packages/ui/package.json" ]; then cd packages/ui && pnpm lint && pnpm typecheck; fi
+        if [ -f "packages/config/package.json" ]; then cd packages/config && pnpm lint; fi
+
+    # Security - Gitleaks (Global)
+    gitleaks:
+      run: gitleaks detect --source . -v --no-banner --redact
+      stage: all
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  commands:
+    frontend-build:
+      glob: "apps/web/**/*"
+      run: cd apps/web && pnpm build
+    backend-test:
+      glob: "apps/api/**/*.py"
+      run: cd apps/api && uv run pytest -x -q

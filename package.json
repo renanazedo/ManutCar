@@ -1,0 +1,27 @@
+{
+  "name": "manutcar-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md,py,toml,yaml,yml}\"",
+    "db:generate": "turbo run db:generate --filter=@manutcar/db",
+    "db:migrate": "turbo run db:migrate --filter=@manutcar/db",
+    "db:upgrade": "turbo run db:upgrade --filter=@manutcar/db",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "lefthook": "^1.7.0",
+    "prettier": "^3.3.0",
+    "@manutcar/config": "workspace:*"
+  },
+  "packageManager": "pnpm@9.4.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
