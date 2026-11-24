@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -9,6 +9,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from manutcar_db.base import Base, UUIDMixin, TimestampMixin, SoftDeleteMixin
 from manutcar_db.enums import MaintenanceType, WorkOrderStatus
+
+if TYPE_CHECKING:
+    from manutcar_db.models.fleet import Vehicle
+    from manutcar_db.models.identity import Organization, User
+    from manutcar_db.models.operations import ChecklistExecution
 
 
 class ServiceProvider(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
