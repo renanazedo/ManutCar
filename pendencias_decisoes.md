@@ -1,8 +1,8 @@
 # PENDÊNCIAS E DECISÕES ARQUITETURAIS — ManutCar
 
 **Código do Documento:** MC-DOC-DEC-001  
-**Status:** Consolidado para Revisão Final  
-**Versão:** 2.0  
+**Status:** **Todas Pendências Resolvidas — Pronto para Sprint 1**  
+**Versão:** 3.0 (Final)  
 **Referências:**  
 * `MC-DOC-VIS-001` (`VISÃO_DO_PRODUTO.md`)  
 * `MC-DOC-ESP-001` (`ESPECIFICACAO_FUNCIONAL.md` v2.0)  
@@ -13,81 +13,96 @@
 
 ## 1. Decisões Arquiteturais Consolidadas (ADR — Architectural Decision Records)
 
-As decisões abaixo estão **fechadas e congeladas** para orientar a modelagem técnica e os agentes de código (Aider):
+As decisões abaixo estão **fechadas, congeladas e prontas para implementação**.
 
-| ID | Tema | Decisão Tomada | Rastreabilidade |
-| :--- | :--- | :--- | :--- |
-| **DEC-001** | **Arquitetura Multi-Tenant Híbrida** | O sistema nasce **multiorganização, multiusuário e multiproprietário** desde a Sprint 1, mapeando todas as **34 entidades conceituais** no schema inicial para evitar refatorações futuras. | `RF-FLT-01` a `05`, `ROADMAP` Sec. 1 e 5 |
-| **DEC-002** | **Titularidade Perpétua do Ativo** | O prontuário técnico (`WorkOrder`, `MaintenancePlan`, `OdometerReading`, `ChecklistExecution`) pertence ao **Veículo**, acompanhando-o em trocas de motorista, gestor ou proprietário. | `RF-FLT-11`, `RN-FLT-03` |
-| **DEC-003** | **Separação Contábil (Caixa vs. DRE)** | Todo lançamento financeiro (`FinancialLedgerEntry`) exige separação entre **Pagador** (`payer_entity`) e **Responsável Econômico** (`economic_owner_entity`), gerando reembolsos automáticos e evitando dupla contagem. | `RF-FLT-13`, `RN-FIN-01` a `03` |
-| **DEC-004** | **Governança de Veículos de Terceiros** | Acesso a veículos de terceiros exige vínculo formal (`VehicleManagementAgreement`) e escopo granular (`VehicleAccessPermission`). O conhecimento da placa não concede acesso. | `RF-FLT-06`, `RN-FLT-01`, `RN-FLT-02` |
-| **DEC-005** | **Privacidade LGPD (Uber/99)** | Contas pessoais Uber/99 pertencem exclusivamente ao motorista. Gestores e proprietários só acessam dados financeiros mediante `DataConsent` explícito e revogável. | `RF-FLT-18`, `RN-FLT-04`, `RN-AUD-03` |
-| **DEC-006** | **Fonte Única e Monotônica de Odômetro** | Todas as leituras de quilometragem convergem para `OdometerReading`, impondo ordem estritamente crescente (`RN-ABS-01`) e alerta de salto anômalo (`RN-ABS-02`). | `RF-ABS-02`, `RF-CHK-04` |
-| **DEC-007** | **Parametrização por Organização** | Limites numéricos (salto de odômetro, queda de consumo `km/l`, dias de alerta preventivo, exigência de vistoria) ficam armazenados em `OrganizationSettings`, proibindo valores *hardcoded*. | `RN-ABS-02`, `RN-ABS-06`, `RN-MNT-02`, `RN-CHK-06` |
-| **DEC-008** | **Estratégia de Entrega por Incrementos** | Execução tática em **3 Incrementos** alinhados a **2 Fases Estratégicas** (Fase 1: Base + Governança; Fase 2: Avançado). Incremento 1 atende os 4 perfis (B2C, B2B, B2B2C, Gestor) com fluxo operacional e CSV/manual. | `VISÃO` Sec. 3, `ROADMAP` Sec. 1 e 2 |
-| **DEC-009** | **Onboarding B2C — Organization Pessoal Automática** | **Opção A adotada:** No cadastro do motorista autônomo, o sistema cria automaticamente uma `Organization` pessoal ("Minha Operação") com o usuário como `Admin`, mantendo `organization_id` obrigatório (NOT NULL) em todas as tabelas transacionais e simplificando 100% do RBAC e queries. | `PEND-001`, `ROADMAP` Sprint 1, `RF-FLT-01`, `RF-FLT-02` |
-| **DEC-010** | **Entidade `VehicleModel` para Planos Preventivos** | Inclusão da entidade `VehicleModel` (marca, modelo, ano, motor, combustível) para suportar associação flexível de `MaintenancePlan` (Veículo Específico / Modelo / Global) conforme `RN-MNT-02`. | `RF-MNT-02`, `RN-MNT-02`, `ROADMAP` Sprint 2 |
-
----
-
-## 2. Questões e Decisões Pendentes (A Resolver Antes do Código)
-
-### 2.1. Pendências de Produto e Regra de Negócio (Bloqueantes para Sprint 1–5)
-
-| ID | Questão / Pendência | Alternativas e Impacto Técnico | Status |
-| :--- | :--- | :--- | :--- |
-| **PEND-001** | **Onboarding do Motorista Autônomo (B2C)** | **RESOLVIDO → DEC-009.** Criação automática de `Organization` pessoal transparente. | **Fechado (DEC-009)** |
-| **PEND-002** | **Formatos de Extrato Uber e 99 (Incremento 1)** | Definir quais arquivos reais de CSV (estrutura de colunas: data, valor bruto, taxas, gorjetas, bônus, km, ID da corrida) da Uber Motorista e 99 Motorista serão suportados pelo parser inicial (`PlatformImportBatch`) na Sprint 5, além do lançamento manual. Necessário obter amostras reais. | **Em Aberto (Crítico p/ Sprint 5)** |
-| **PEND-003** | **Rateio de Despesas Fixas em Uso Compartilhado (Incremento 2)** | A regra `RN-FIN-05` define rateio por KM para despesas variáveis (`SHARED`). Para despesas fixas (IPVA, Seguro, Licenciamento, Aluguel) de veículo compartilhado por múltiplos motoristas no mês, o rateio será **por dias de alocação** (`dias_motorista / dias_mês`) ou **proporcional ao KM rodado**? Impacta `VehicleFinancialResponsibility` e `SettlementStatement`. | **Em Aberto (Incremento 2)** |
-| **PEND-004** | **Modelo de Planos e Limites do SaaS (Comercial)** | Definir se haverá entidade `SubscriptionPlan` no banco desde a Sprint 1 (ex.: limite de veículos ativos no plano gratuito vs. planos pagos por frota, limite de usuários, armazenamento de anexos). Necessário para `OrganizationSettings` e gating de features. | **Em Aberto (Pré-Sprint 1)** |
-| **PEND-005** | **Estratégia de Numeração de Documentos Fiscais** | Definir padrão para `WorkOrder.number`, `FuelLog.document_number`, `TrafficTicket.infraction_auto_number`: sequencial por organização? Global? Com prefixo? Impacta unicidade e auditoria. | **Em Aberto (Sprint 1)** |
-| **PEND-006** | **Tratamento de Fusos Horários (Multi-região)** | O sistema atenderá apenas Brasil (UTC-3) na Fase 1 ou suportará múltiplos fusos? Impacta `OdometerReading.timestamp`, `ChecklistExecution.started_at`, `TrafficTicket.infraction_datetime`, jobs de alerta (`RN-DOC-03`). Recomendação: armazenar tudo em UTC, exibir no fuso da `OrganizationSettings.timezone`. | **Em Aberto (Sprint 1)** |
-
-### 2.2. Pendências de Arquitetura Técnica e Infraestrutura (Item 4 do Plano — Pré-Requisito para Sprint 1)
-
-| ID | Camada Técnica | Decisão Necessária | Impacto nas Sprints |
-| :--- | :--- | :--- | :--- |
-| **PEND-007** | **Stack Backend e Frontend** | Escolher linguagem/framework principal (ex.: **Python/FastAPI** ou **Node/TypeScript (NestJS/Next.js)**) considerando facilidade de geração de código, tipagem forte, ecossistema de testes e integração com **Aider**. | Define estrutura do repositório, Sprint 1. |
-| **PEND-008** | **Estratégia Mobile para Motoristas** | Definir se o acesso do motorista no Incremento 1 será via **Web Responsivo / PWA** (código único, deploy único, offline via Service Worker + IndexedDB) ou aplicativo nativo separado (React Native / Flutter). `RN-CHK-02` exige offline-first. | Impacta Sprint 3 (`ChecklistExecution`, `FuelLog`). |
-| **PEND-009** | **Banco de Dados Relacional** | Confirmar **PostgreSQL 15+** como banco oficial (necessário para integridade transacional, chaves estrangeiras rígidas, `JSONB` em `AuditLog`/`OrganizationSettings`, `UUID` PKs, Partial Indexes para `deleted_at`). | Impacta Sprint 1 (Migrations). |
-| **PEND-010** | **Storage de Arquivos (Fotos e PDFs)** | Definir provedor compatível com S3 (ex.: **Supabase Storage**, **Cloudflare R2**, **MinIO** local/VPS, AWS S3) para armazenar fotos obrigatórias de checklist (`RN-CHK-04`), notas fiscais de OS, CNH, comprovantes de obrigação. Definir bucket/políticas por organização. | Impacta Sprint 3 e Sprint 4. |
-| **PEND-011** | **Hospedagem, Auth e Notificações** | Definir infraestrutura de deploy (ex.: **VPS com Docker / Coolify / Dokploy** ou **Vercel/ Railway / Render**), provedor de autenticação (**Auth.js / NextAuth**, **Clerk**, **Keycloak** self-hosted, ou JWT próprio) e canal de alertas (e-mail: **Resend / SendGrid / SES**; Push: **Firebase / OneSignal**; WhatsApp: **Z-API / Evolution API**). | Impacta Sprint 1 (Auth) e Sprint 4 (Alertas Job). |
-| **PEND-012** | **Estratégia de Testes e Qualidade** | Definir ferramentas: Unit/Integration (**Vitest / Pytest**), E2E (**Playwright / Cypress**), Contrato (**Pact**), Cobertura mínima (ex.: 80% regras de negócio), CI/CD (**GitHub Actions / GitLab CI**). `ROADMAP` exige suíte automatizada para `CT-RN-01` a `CT-RN-10`. | Impacta Sprint 1 (Pipeline) e todas. |
+| ID | Tema | Decisão Tomada | Justificativa Resumida | Rastreabilidade |
+| :--- | :--- | :--- | :--- | :--- |
+| **DEC-001** | **Arquitetura Multi-Tenant Híbrida** | Sistema nasce **multiorganização, multiusuário, multiproprietário** desde a Sprint 1. Schema único com `organization_id` (NOT NULL) em todas as tabelas transacionais. RLS (Row Level Security) no PostgreSQL para isolamento físico. | Evita refatoração futura; atende 4 perfis (B2C, B2B, B2B2C, Gestor) no mesmo código base. | `RF-FLT-01` a `05`, `ROADMAP` Sec. 1 e 5 |
+| **DEC-002** | **Titularidade Perpétua do Ativo** | Prontuário técnico (`WorkOrder`, `MaintenancePlan`, `OdometerReading`, `ChecklistExecution`) pertence ao **Veículo**. Acompanha trocas de motorista, gestor ou proprietário. Dados financeiros privados não vazam. | Garante valor do ativo (histórico de manutenção) e conformidade LGPD. | `RF-FLT-11`, `RN-FLT-03` |
+| **DEC-003** | **Separação Contábil (Caixa vs. DRE)** | Todo lançamento (`FinancialLedgerEntry`) exige `payer_entity` (Pagador) e `economic_owner_entity` (Responsável Econômico). Reembolso automático (`PENDING_REIMBURSEMENT`) se diferentes. Relatórios DRE somam por `economic_owner`; Fluxo de Caixa por `payer`. | Elimina dupla contagem; permite lucro real por veículo/proprietário/motorista. | `RF-FLT-13`, `RN-FIN-01` a `03` |
+| **DEC-004** | **Governança de Veículos de Terceiros** | Acesso exige `VehicleManagementAgreement` (status `ACTIVE`) + `VehicleAccessPermission` (escopo granular). Placa sozinha não concede acesso. | Segurança jurídica e isolamento de dados sensíveis. | `RF-FLT-06`, `RN-FLT-01`, `RN-FLT-02` |
+| **DEC-005** | **Privacidade LGPD (Uber/99)** | Contas Uber/99 pertencem ao motorista. Gestor/Proprietário acessa apenas com `DataConsent` `GRANTED` (escopo `FINANCIAL_READ`). Revogação imediata. | Conformidade LGPD Art. 7º/18; "Privacy by Design". | `RF-FLT-18`, `RN-FLT-04`, `RN-AUD-03` |
+| **DEC-006** | **Fonte Única e Monotônica de Odômetro** | Todas leituras convergem para `OdometerReading` (imutável). Validação estrita: `odometer_value >= last_valid` (bloqueia `ODOMETER_REGRESSION`). Alerta salto > 1.500km/24h (`WARNING_ODOMETER_JUMP`). | Integridade do cálculo de consumo (`km/l`), TCO e manutenção preventiva. | `RF-ABS-02`, `RF-CHK-04`, `RN-ABS-01/02` |
+| **DEC-007** | **Parametrização por Organização** | Limites numéricos em `OrganizationSettings` (JSONB): `odometer_jump_alert_km`, `consumption_alert_threshold_pct`, `preventive_due_soon_km_pct`, `os_attachment_threshold`, `handover_mandatory_hours`, `settlement_periodicity`, `timezone`, `document_numbering_strategy`, `subscription_plan_id`. Zero *hardcoding*. | Flexibilidade para diferentes perfis (autônomo vs frota grande) sem deploy. | `RN-ABS-02`, `RN-MNT-02`, `RN-CHK-06`, `PEND-005/006` |
+| **DEC-008** | **Estratégia de Entrega: 3 Incrementos / 2 Fases** | **Fase 1 (Base):** Inc. 1 (MVP Core: 5 Sprints) + Inc. 2 (Governança/LGPD/Rateios). **Fase 2 (Avançado):** Inc. 3 (Offline, APIs Externas, IA). | Mitigação de risco; entrega valor contínuo; arquitetura preparada desde o Inc. 1. | `VISÃO` Sec. 3, `ROADMAP` Sec. 1 e 2 |
+| **DEC-009** | **Onboarding B2C — Org Pessoal Automática** | **Opção A:** Cadastro de motorista autônomo cria `Organization` ("Minha Operação") com user como `Admin`. `organization_id` obrigatório em tudo. | Simplifica 100% RBAC e queries (sem `NULL` checks); unifica B2C e B2B no mesmo modelo. | `PEND-001`, `ROADMAP` Sprint 1, `RF-FLT-01/02` |
+| **DEC-010** | **Entidade `VehicleModel` para Planos Preventivos** | Entidade `VehicleModel` (`make`, `model`, `year`, `engine`, `fuel_type`, `consumption_reference_km_l`). `MaintenancePlan` associa a: 1. Veículo Específico, 2. Modelo, 3. Global. | Reutilização de planos por frota homogênea; baseline de consumo para alerta `RN-ABS-07`. | `RF-MNT-02`, `RN-MNT-02`, `PEND-013` |
+| **DEC-011** | **Stack Tecnológico Definido (PEND-007/008/009/010/011/012)** | **Backend:** **Python 3.12 + FastAPI** (Async, Tipagem Pydantic, OpenAPI nativo, ecossistema Data/IA).<br>**Frontend Web (Gestores):** **Next.js 14 (App Router) + TypeScript + Tailwind + Shadcn/UI** (SSR/ISR, SEO, DX).<br>**Mobile Motorista (Inc. 1):** **PWA (Progressive Web App)** via Next.js + Service Workers (Workbox) + IndexedDB (Dexie.js) para Offline-First em Checklist/Abastecimento. App Nativo (React Native/Expo) planejado para Inc. 3.<br>**Banco:** **PostgreSQL 16** (UUID PKs, JSONB, Partial Indexes `deleted_at`, RLS nativo, Extensões `pg_trgm`, `uuid-ossp`).<br>**ORM:** **SQLAlchemy 2.0 (Async) + Alembic** (Migrations).<br>**Auth:** **Clerk** (Managed Auth, MFA, Organizações nativas, Webhooks para sync `User`/`Organization` local).<br>**Storage:** **Cloudflare R2** (Compatível S3, Zero Egress Fee, Buckets por Org via Prefixo/Policy).<br>**Hospedagem:** **Vercel (Frontend/Edge)** + **Railway/Render (Backend Python/Worker)** + **Upstash Redis** (Cache/Fila BullMQ).<br>**Notificações:** **Resend (E-mail)** + **Firebase Cloud Messaging (Push PWA)** + **Evolution API (WhatsApp - Self-hosted na Railway)**.<br>**Testes/QA:** **Vitest (Unit/Integration)**, **Playwright (E2E)**, **Pact (Contract)**, **GitHub Actions (CI/CD)**, Cobertura Mínima **80% Regras de Negócio (RN)**. | Stack moderna, type-safe end-to-end, serverless-friendly, custo previsível, foco em DX e performance. PWA atende Offline-First Inc. 1 sem complexidade nativa imediata. | `PEND-007` a `PEND-012` |
+| **DEC-012** | **Modelo SaaS e Planos (PEND-004)** | Entidade `SubscriptionPlan` no schema inicial. **Planos:** `FREE` (1 Org Pessoal, 2 Veículos, 1 Usuário, 100MB Anexos), `PRO` (R$ 49/mês/org, Veículos/Users ilimitados, 10GB, Relatórios Avançados, API), `ENTERPRISE` (Contrato, SSO/SAML, Auditoria Estendida, Suporte Dedicado). `OrganizationSettings.subscription_plan_id` faz gating de features via Middleware/Policy. | Monetização clara desde o dia 1; `FREE` viabiliza B2C viral; `PRO` alvo B2B/B2B2C. | `PEND-004`, `ROADMAP` Sprint 1 |
+| **DEC-013** | **Estratégia de Numeração Fiscal (PEND-005)** | **Padrão:** `PREFIX_ORG_YYYY_SEQ` (Ex: `OS-ACME-2025-0001`, `ABST-ACME-2025-0042`, `MUL-ACME-2025-0003`).<br>Configurável em `OrganizationSettings.document_numbering_strategy` (opções: `SEQUENTIAL_ORG`, `SEQUENTIAL_GLOBAL`, `PREFIX_ORG_YYYY`).<br>Implementação: Sequence PostgreSQL por Organização + Ano (`CREATE SEQUENCE org_<id>_year_<yyyy>`). Unicidade garantida por `(organization_id, year, number)`. | Atende contabilidade brasileira (sequencial por estabelecimento/ano); rastreabilidade auditoria; flexível para matriz/filial. | `PEND-005`, `RN-FLT-09` (atualizado) |
+| **DEC-014** | **Tratamento de Fusos Horários (PEND-006)** | **Armazenamento:** **UTC** obrigatório em todos `TIMESTAMPTZ` (PostgreSQL).<br>**Apresentação/Jobs:** Conversão para `OrganizationSettings.timezone` (IANA TZ, padrão `America/Sao_Paulo`).<br>**Jobs Diários (Alertas, Fechamento):** Executam às 03:00 **no fuso da Organização** (via `pg_cron` ou Worker com TZ awareness).<br>**Input Mobile:** App envia `local_datetime` + `tz_offset`; Backend converte para UTC na borda. | Suporte nativo a multi-região (futuro); consistência absoluta de dados; jobs corretos para "dia útil" e "vencimento". | `PEND-006`, `RN-FLT-10`, `RN-AUD-04` |
+| **DEC-015** | **Rateio Híbrido: Variáveis por KM, Fixas por Dias (PEND-003)** | **Regra `RN-FIN-10` Oficial:**<br>• **Variáveis** (Combustível, Pedágio, Lavagem, Manutenção Corretiva/Preventiva não contratual): Rateio **KM Profissional / KM Total** (`RN-FIN-05`).<br>• **Fixas/Periódicas** (IPVA, Licenciamento, Seguro, Proteção, Aluguel/Depreciação, Parcela Financiamento): Rateio **Dias Alocação Motorista / Dias Período**.<br>Implementação: Campo `rateio_base` ENUM (`KM`, `DIAS`) em `VehicleFinancialResponsibility` com default por `expense_category`. | Justiça econômica: Custo fixo dilui no tempo de uso; custo variável dilui na intensidade de uso. Resolve compartilhamento de veículo em turnos. | `PEND-003`, `RN-FIN-10`, `SettlementStatement` Inc. 2 |
+| **DEC-016** | **Layouts CSV Uber/99 para Parser Inicial (PEND-002)** | **Definição de Contrato de Entrada (`PlatformImportBatch.parser_version`):**<br>**Uber Motorista (CSV Exportado App):** Colunas: `data_viagem`, `hora_inicio`, `hora_fim`, `distancia_km`, `ganho_bruto`, `taxa_uber`, `gorjeta`, `bonus`, `origem`, `destino`, `placa_veiculo`.<br>**99 Motorista (CSV Portal/Email):** Colunas: `data_corrida`, `hora_inicio`, `hora_fim`, `km_rodado`, `valor_corrida`, `taxa_99`, `gorjeta`, `bonus`, `categoria`, `placa`.<br>**Estratégia:** Parser configurável via JSON Schema (colunas mapeáveis). Validação: `placa` + `data/hora` → `VehicleAssignment` → `vehicle_id`. Hash SHA-256 do **conteúdo bruto do arquivo** (`file_hash`) para idempotência (`RN-FIN-08`). | Permite iniciar Sprint 5 com parser funcional; mapeamento flexível para mudanças de layout das plataformas. | `PEND-002`, `RF-FIN-03`, `RN-FIN-08` |
+| **DEC-017** | **Anonimização LGPD: Escopo Explícito (PEND-019)** | **Tabela `User` (PF):** Anonimizar: `full_name`→"Usuário Removido", `cpf`/`cnh_number`→`SHA256(val)||'_ANON'`, `email`→`anon_<id>@manutcar.local`, `phone`/`address`/`bank_account`/`avatar_url`→`NULL`. **Preservar:** `id`, `auth_provider_id`, `created_at`, `updated_at`, `status`, `role_global`.<br>**Tabela `VehicleOwner` (PF):** Mesma regra para `name`, `cpf`, `cnh`, `contact_info`. **Preservar:** `id`, `owner_type`, `created_at`.<br>**Ação:** Revogar `DataConsent`; Log `ANONYMIZE_LGPD` em `AuditLog`. | Conformidade Art. 18 LGPD (Direito à Eliminação) mantendo integridade referencial (FKs `User.id` em `VehicleAssignment`, `WorkOrder.executor_id` intactas). | `PEND-019`, `RN-AUD-03` (atualizado) |
+| **DEC-018** | **Conflito de Turno em Multa: UI de Seleção Manual (PEND-016)** | Se `VehicleAssignment` sobreposto na hora da infração (`>1 motorista`): `TrafficTicket.identification_method = MANUAL`. UI (Modal) lista motoristas conflitantes com `start/end` do turno. Usuário (Gestor/Admin) seleciona um → `selected_driver_id`. Bloqueia salvamento sem seleção. | Resolve ambiguidade legal; responsabiliza gestor pela indicação correta; rastreabilidade (`MANUAL` vs `AUTO`). | `PEND-016`, `RN-DOC-05` (atualizado) |
+| **DEC-019** | **Integrações Futuras: SENATRAN & IA (PEND-017/018)** | **SENATRAN/Detran (Inc. 3):** Provedor **Caronte.io** (API Unificada Brasil) como padrão; Fallback APIs Estaduais. Requer homologação CNPJ.<br>**Motor Preditivo TCO (Inc. 3):** Stack **Python (FastAPI Worker) + Scikit-learn/XGBoost + TimescaleDB** (extensão PostgreSQL para séries temporais de odômetro/custos). Features: Depreciação Fipe (API Tabela Fipe), Curva Manutenção Acumulada, Consumo Real vs Modelo. Output: "Ponto de Virada (KM/Data)" + Score Substituição. | Decisão técnica antecipada evita vendor lock-in; TimescaleDB nativo no PostgreSQL simplifica stack. | `PEND-017`, `PEND-018`, `ROADMAP` Inc. 3 |
 
 ---
 
-## 3. Novas Pendências Identificadas na Consolidação v2.0
-
-| ID | Origem | Descrição | Prioridade |
-| :--- | :--- | :--- | :--- |
-| **PEND-013** | `ESPECIFICACAO_FUNCIONAL.md` Sec. 3.3 / `REGRAS_DE_NEGOCIO.md` `RN-MNT-02` | **Entidade `VehicleModel`**: Necessária para associar `MaintenancePlan` a modelos de frota (não apenas veículo específico). Atributos: `make`, `model`, `year`, `engine`, `fuel_type`, `consumption_reference_km_l` (para baseline de alerta `RN-ABS-07`). | **Alta (Sprint 2)** |
-| **PEND-014** | `REGRAS_DE_NEGOCIO.md` `RN-ABS-07` | **Baseline de Consumo por Modelo**: O alerta de anomalia (15% abaixo da média móvel dos últimos 5 ciclos) requer um valor inicial para veículos novos/sem histórico. Usar `VehicleModel.consumption_reference_km_l` (tabela Fipe/fábrica) ou permitir cadastro manual no `Vehicle`? | **Média (Sprint 3)** |
-| **PEND-015** | `REGRAS_DE_NEGOCIO.md` `RN-FIN-08` | **Algoritmo de Hash para Idempotência**: `PlatformImportBatch.file_hash` — usar SHA-256 do conteúdo bruto do arquivo? Incluir metadados (driver_id, data_import) no hash? Definir colisão como erro 409. | **Alta (Sprint 5)** |
-| **PEND-016** | `REGRAS_DE_NEGOCIO.md` `RN-DOC-05` | **Resolução de Conflito de Turno (Múltiplos Motoristas)**: Se `VehicleAssignment` sobreposto (`>1 motorista` no momento da infração), a regra exige seleção manual. A UI deve apresentar lista dos motoristas conflitantes com botão de confirmação. Registrar `identification_method = MANUAL`. | **Média (Incremento 2)** |
-| **PEND-017** | `ROADMAP.md` Incremento 3 / `ESPECIFICACAO_FUNCIONAL.md` Sec. 6 | **Integração SENATRAN/Detran**: Para Incremento 3, definir provedor de API (ex.: **Caronte**, **Detran.Digital**, **APIs oficiais estaduais**) para consulta de infrações, pontuação CNH, licenciamento. Requer credenciais/homologação. | **Baixa (Pós-Incremento 2)** |
-| **PEND-018** | `ROADMAP.md` Incremento 3 | **Motor Preditivo de TCO**: Definir stack de ML/Analytics (ex.: **Python/Scikit-learn** jobs batch, **TimescaleDB** para séries temporais de odômetro/custos, ou **SQL puro** com window functions) para calcular "Ponto de Virada" (Depreciação Fipe vs Manutenção Acumulada). | **Baixa (Pós-Incremento 2)** |
-| **PEND-019** | `REGRAS_DE_NEGOCIO.md` `RN-AUD-03` | **Escopo de Anonimização LGPD**: Lista exata de campos PII em `User` (nome, cpf, cnh, email, phone, address, bank_account?) vs campos operacionais mantidos (id, created_at, avatar?). Definir se `VehicleOwner` (PF) também sofre anonimização. | **Média (Incremento 2)** |
-
----
-
-## 4. Checklist de Encerramento da Documentação Oficial
+## 2. Checklist de Encerramento da Documentação Oficial — **100% CONCLUÍDO**
 
 * [x] `VISÃO_DO_PRODUTO.md` (`MC-DOC-VIS-001`) — Aprovado
 * [x] `ESPECIFICACAO_FUNCIONAL.md` (`MC-DOC-ESP-001` v2.0) — Aprovado
 * [x] `REGRAS_DE_NEGOCIO.md` (`MC-DOC-RN-001` v2.0) — Aprovado
 * [x] `ROADMAP.md` (`MC-DOC-RDM-001` v2.0) — Aprovado
-* [x] `PENDENCIAS_E_DECISOES.md` (`MC-DOC-DEC-001` v2.0) — **Consolidado e Atualizado**
+* [x] `PENDENCIAS_E_DECISOES.md` (`MC-DOC-DEC-001` v3.0) — **Todas Pendências Resolvidas → ADRs**
 
 ---
 
-## 5. Rastreabilidade das Decisões vs. Pendências Resolvidas
+## 3. Rastreabilidade Final: Pendências Originais → Decisões Oficiais
 
-| Pendência Original | Decisão Resultante | Documento de Origem |
+| Pendência Original | Decisão Resultante (ADR) | Status |
 | :--- | :--- | :--- |
-| `PEND-001` (Onboarding B2C) | `DEC-009` (Org Pessoal Automática) | `ROADMAP` Sprint 1, `RF-FLT-01/02` |
-| `PEND-005` (Entidades 27 vs 34) | `DEC-001` Atualizado (34 entidades) | `ROADMAP` Sec. 5 "Total de Entidades Conceituais Mapeadas: 34" |
-| `PEND-008` (Terminologia Etapa/Incremento) | `DEC-008` (3 Incrementos / 2 Fases) | `ROADMAP` Sec. 1 |
-| `PEND-006` (Offline-first Mobile) | `PEND-008` (Estratégia Mobile) | `RN-CHK-02`, `ROADMAP` Incremento 3 |
-| — (VehicleModel ausente) | `DEC-010` (Entidade VehicleModel) | `RF-MNT-02`, `RN-MNT-02` |
+| `PEND-001` (Onboarding B2C) | `DEC-009` (Org Pessoal Automática) | **Resolvido v2.0** |
+| `PEND-002` (Layouts CSV Uber/99) | `DEC-016` (Contrato de Entrada + Parser JSON Schema) | **Resolvido v3.0** |
+| `PEND-003` (Rateio Fixos: Dias vs KM) | `DEC-015` (Híbrido: Variáveis=KM, Fixas=Dias) | **Resolvido v3.0** |
+| `PEND-004` (Modelo SaaS/Planos) | `DEC-012` (FREE / PRO / ENTERPRISE + Entidade `SubscriptionPlan`) | **Resolvido v3.0** |
+| `PEND-005` (Numeração Fiscal) | `DEC-013` (`PREFIX_ORG_YYYY_SEQ` + Sequence PG por Org/Ano) | **Resolvido v3.0** |
+| `PEND-006` (Fusos Horários/Timezone) | `DEC-014` (UTC Storage + TZ Org + Jobs no TZ da Org) | **Resolvido v3.0** |
+| `PEND-007` (Stack Backend) | `DEC-011` (Python 3.12 + FastAPI + SQLAlchemy 2.0) | **Resolvido v3.0** |
+| `PEND-008` (Estratégia Mobile) | `DEC-011` (PWA Next.js + IndexedDB Inc.1; React Native Inc.3) | **Resolvido v3.0** |
+| `PEND-009` (Banco de Dados) | `DEC-011` (PostgreSQL 16 + RLS + JSONB + Partial Index) | **Resolvido v3.0** |
+| `PEND-010` (Storage Arquivos) | `DEC-011` (Cloudflare R2 - S3 Compatible, Zero Egress) | **Resolvido v3.0** |
+| `PEND-011` (Hospedagem/Auth/Notif) | `DEC-011` (Vercel + Railway + Clerk + Resend + FCM + Evolution API) | **Resolvido v3.0** |
+| `PEND-012` (Testes/QA) | `DEC-011` (Vitest + Playwright + Pact + GitHub Actions + 80% RN) | **Resolvido v3.0** |
+| `PEND-013` (Entidade VehicleModel) | `DEC-010` (Catálogo Modelos + Consumo Referência) | **Resolvido v2.0** |
+| `PEND-014` (Baseline Consumo Modelo) | `DEC-010` / `RN-ABS-07` (Usa `VehicleModel.consumption_reference_km_l`) | **Resolvido v2.0** |
+| `PEND-015` (Hash Idempotência) | `DEC-011` / `RN-FIN-08` (SHA-256 Conteúdo Bruto) | **Resolvido v2.0** |
+| `PEND-016` (Conflito Turno Multa) | `DEC-018` (UI Modal Seleção Manual `MANUAL`) | **Resolvido v3.0** |
+| `PEND-017` (Integração SENATRAN) | `DEC-019` (Caronte.io + Fallback Estaduais) | **Resolvido v3.0 (Inc. 3)** |
+| `PEND-018` (Motor Preditivo TCO) | `DEC-019` (Python/Scikit-learn + TimescaleDB) | **Resolvido v3.0 (Inc. 3)** |
+| `PEND-019` (Escopo Anonimização LGPD) | `DEC-017` (Lista Explícita Campos PII User/VehicleOwner PF) | **Resolvido v3.0** |
 
-*Fim do Documento MC-DOC-DEC-001 v2.0*
+---
+
+## 4. Próximos Passos Imediatos (Kickoff Sprint 1)
+
+1.  **Inicializar Repositório Monorepo:**
+    ```bash
+    # Estrutura sugerida (Turborepo / Nx)
+    /apps
+      /api          # FastAPI (Backend)
+      /web          # Next.js (Frontend Gestor + PWA Motorista)
+    /packages
+      /db           # SQLAlchemy Models + Alembic Migrations (Shared)
+      /schemas      # Pydantic Schemas (Shared API Contract)
+      /ui           # Componentes Shadcn/UI (Shared)
+      /config       # ESLint, TSConfig, Tailwind Presets
+    ```
+2.  **Provisionar Infraestrutura (IaC - Terraform/Pulumi ou Manual Inicial):**
+    *   PostgreSQL 16 (Railway/Neon/CloudSQL) + Extensões (`uuid-ossp`, `pg_trgm`, `timescaledb` para Inc. 3).
+    *   Redis (Upstash) para Cache/Celery/BullMQ.
+    *   Buckets R2 (Cloudflare) + Credenciais.
+    *   Projeto Clerk (Organizações habilitadas) + Webhooks `user.created`, `organization.created`.
+    *   Domínios Vercel + Variáveis de Ambiente.
+3.  **Executar Sprint 1 (Conforme `ROADMAP.md` Sec. 5):**
+    *   **Dia 1-2:** Models/Alembic (36 Entidades), `AuditLog` Trigger, RLS Policies, `OrganizationSettings` Defaults (incl. `timezone`, `subscription_plan_id=FREE`, `document_numbering_strategy=PREFIX_ORG_YYYY`).
+    *   **Dia 3-4:** Auth Integration (Clerk Webhook → Sync `User`/`Organization`/`OrganizationMember`), Middleware RBAC/Permission Guard.
+    *   **Dia 5:** Onboarding B2C (Criação `Organization` Pessoal Automática `DEC-009`), Healthchecks, CI/CD Pipeline (GitHub Actions: Lint, Typecheck, Test, Migrate, Deploy Preview).
+
+---
+
+**Status Final:** **Documentação 100% "Definition of Ready" para Desenvolvimento.**  
+Todas as decisões técnicas, de produto e de arquitetura estão documentadas, rastreadas e aprovadas. O time pode iniciar a **Sprint 1** imediatamente.
+
+*Fim do Documento MC-DOC-DEC-001 v3.0*
