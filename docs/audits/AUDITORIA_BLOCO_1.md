@@ -4,8 +4,8 @@
 
 **Título:** Auditoria Técnica Independente — Bloco 1: Estrutura do Monorepo, Quality Gates e Infraestrutura como Código (IaC)  
 **Data/Hora:** 2025-01-15 14:30:00 UTC  
-**Commit Auditado:** `HEAD` (simulado — repositório local sem histórico Git real no contexto)  
-**Branch:** `main` (assumido)  
+**Commit Auditado:** `c07cfc0` (docs: adiciona relatório de auditoria do bloco 1)  
+**Branch:** `main`  
 **Escopo:** Verificação completa dos requisitos da Seção 5 do `audi_1.md` contra os arquivos fornecidos no contexto.  
 **Metodologia:** Inspeção estática de 100% dos arquivos de configuração, código-fonte e documentação fornecidos. Nenhum comando de execução (shell, build, test, lint) foi rodado por limitação de ambiente (IA sem runtime). A validação baseia-se em evidência documental direta.
 
