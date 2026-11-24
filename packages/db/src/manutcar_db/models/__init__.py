@@ -1,16 +1,4 @@
-"""
-ManutCar Database Models Package
-
-This package contains all SQLAlchemy models organized by domain:
-- identity: Users, Organizations, Memberships, Invitations, Consents
-- fleet: Vehicles, Owners, Agreements, Assignments, Financial Responsibilities
-- operations: Odometer, Fuel, Checklists, Anomalies
-- maintenance_docs: Work Orders, Documents, Parts, Services
-- finance_audit: Revenue, Ledger, Settlements, Audit Logs, Webhooks
-"""
-
-# Identity models
-from manutcar_db.models.identity import (
+﻿from manutcar_db.models.identity import (
     DataConsent,
     Organization,
     OrganizationInvitation,
@@ -18,8 +6,6 @@ from manutcar_db.models.identity import (
     OrganizationSettings,
     User,
 )
-
-# Fleet models
 from manutcar_db.models.fleet import (
     Vehicle,
     VehicleAccessPermission,
@@ -29,8 +15,6 @@ from manutcar_db.models.fleet import (
     VehicleOwner,
     VehicleOwnershipHistory,
 )
-
-# Operations models
 from manutcar_db.models.operations import (
     ChecklistExecution,
     ChecklistResponseItem,
@@ -40,16 +24,18 @@ from manutcar_db.models.operations import (
     FuelLog,
     OdometerReading,
 )
-
-# Maintenance docs models
 from manutcar_db.models.maintenance_docs import (
-    MaintenanceDocument,
-    MaintenancePart,
-    MaintenanceService,
+    DriverLicense,
+    MaintenancePlan,
+    MaintenanceRequest,
+    ObligationInstallment,
+    ServiceProvider,
+    TrafficTicket,
+    VehicleMaintenanceSchedule,
+    VehicleObligation,
     WorkOrder,
+    WorkOrderItem,
 )
-
-# Finance & Audit models
 from manutcar_db.models.finance_audit import (
     AuditLog,
     FinancialLedgerEntry,
@@ -60,39 +46,40 @@ from manutcar_db.models.finance_audit import (
 )
 
 __all__ = [
-    # Identity
-    "User",
+    "AuditLog",
+    "ChecklistExecution",
+    "ChecklistResponseItem",
+    "ChecklistTemplate",
+    "ChecklistTemplateItem",
+    "ConsumptionAnomalyAlert",
+    "DataConsent",
+    "DriverLicense",
+    "FinancialLedgerEntry",
+    "FuelLog",
+    "MaintenancePlan",
+    "MaintenanceRequest",
+    "ObligationInstallment",
+    "OdometerReading",
     "Organization",
+    "OrganizationInvitation",
     "OrganizationMember",
     "OrganizationSettings",
-    "OrganizationInvitation",
-    "DataConsent",
-    # Fleet
-    "VehicleOwner",
+    "PlatformImportBatch",
+    "ProcessedWebhookEvent",
+    "RevenueEntry",
+    "ServiceProvider",
+    "SettlementStatement",
+    "TrafficTicket",
+    "User",
     "Vehicle",
-    "VehicleOwnershipHistory",
-    "VehicleManagementAgreement",
     "VehicleAccessPermission",
     "VehicleAssignment",
     "VehicleFinancialResponsibility",
-    # Operations
-    "OdometerReading",
-    "FuelLog",
-    "ConsumptionAnomalyAlert",
-    "ChecklistTemplate",
-    "ChecklistTemplateItem",
-    "ChecklistExecution",
-    "ChecklistResponseItem",
-    # Maintenance Docs
+    "VehicleMaintenanceSchedule",
+    "VehicleManagementAgreement",
+    "VehicleObligation",
+    "VehicleOwner",
+    "VehicleOwnershipHistory",
     "WorkOrder",
-    "MaintenanceDocument",
-    "MaintenancePart",
-    "MaintenanceService",
-    # Finance & Audit
-    "PlatformImportBatch",
-    "RevenueEntry",
-    "FinancialLedgerEntry",
-    "SettlementStatement",
-    "AuditLog",
-    "ProcessedWebhookEvent",
+    "WorkOrderItem",
 ]

@@ -83,3 +83,6 @@ markers = [
     "integration: Integration tests",
     "slow: Slow tests",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/manutcar_db"]
