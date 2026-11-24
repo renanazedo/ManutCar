@@ -1,0 +1,9 @@
+
+## Princípios
+- **Single Source of Truth:** Contratos definidos **uma vez** aqui.
+- **Backend:** Usa diretamente nos endpoints FastAPI (`response_model`, `Body(...)`).
+- **Frontend:** Gera tipos TypeScript via `pydantic2ts` ou mantém manualmente sincronizado em `packages/ui/src/types/api.ts`.
+- **Validação:** `model_config = ConfigDict(extra='forbid', str_strip_whitespace=True, validate_assignment=True)`
+- **Serialização:** `model_dump(mode='json', by_alias=True, exclude_unset=True)` para APIs.
+
+## Enums Críticos (referência `regra_negocio.md`)
