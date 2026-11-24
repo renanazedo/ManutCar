@@ -73,10 +73,6 @@ ignore = [
     "TRY003", # avoid specifying long messages outside exceptions (too strict)
     "PLW0603", # global statement (used in lifespan)
 ]
-per-file-ignores = {
-    "tests/*": ["S101", "ARG001", "ARG002"],
-    "alembic/*": ["S101", "ERA001"],
-}
 exclude = [".venv", ".mypy_cache", ".ruff_cache", "dist", "build", "__pycache__", "migrations"]
 
 [tool.ruff.format]
@@ -88,6 +84,10 @@ line-ending = "lf"
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
 import-headings = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCAL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "ARG001", "ARG002"]
+"alembic/*" = ["S101", "ERA001"]
 
 [tool.mypy]
 python_version = "3.12"
