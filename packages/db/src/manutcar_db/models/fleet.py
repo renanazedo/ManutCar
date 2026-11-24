@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -21,6 +21,13 @@ from manutcar_db.enums import (
     FuelType,
     VehicleOperationalStatus,
 )
+
+if TYPE_CHECKING:
+    from manutcar_db.models.identity import (
+        Organization,
+        OrganizationInvitation,
+        User,
+    )
 
 
 class VehicleOwner(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):

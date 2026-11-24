@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -17,6 +17,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from manutcar_db.base import Base, SoftDeleteMixin, TimestampMixin, UUIDMixin
 from manutcar_db.enums import AgreementStatus, ConsentStatus, OrgRole
+
+if TYPE_CHECKING:
+    from manutcar_db.models.fleet import (
+        Vehicle,
+        VehicleAssignment,
+        VehicleFinancialResponsibility,
+        VehicleManagementAgreement,
+        VehicleOwner,
+    )
 
 
 class User(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
