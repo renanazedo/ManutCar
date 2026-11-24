@@ -105,7 +105,8 @@ async def _handle_user_updated(db: AsyncSession, data: dict):
         avatar_url=user_data.image_url,
         phone=user_data.phone_numbers[0].phone_number if user_data.phone_numbers else None,
         metadata_json=user_data.unsafe_metadata or {},
-    ).on_conflict_do_update(
+    )
+    stmt = stmt.on_conflict_do_update(
         index_elements=["id"],
         set_={
             "email": stmt.excluded.email,
@@ -142,7 +143,8 @@ async def _handle_org_created(db: AsyncSession, data: dict):
         slug=org_data.slug,
         owner_user_id=org_data.created_by, # Quem criou no Clerk
         settings=OrganizationSettings(),
-    ).on_conflict_do_update(
+    )
+    stmt = stmt.on_conflict_do_update(
         index_elements=["id"],
         set_={"name": stmt.excluded.name, "slug": stmt.excluded.slug},
     )
@@ -155,7 +157,8 @@ async def _handle_org_updated(db: AsyncSession, data: dict):
         id=org_data.id,
         name=org_data.name,
         slug=org_data.slug,
-    ).on_conflict_do_update(
+    )
+    stmt = stmt.on_conflict_do_update(
         index_elements=["id"],
         set_={"name": stmt.excluded.name, "slug": stmt.excluded.slug},
     )
@@ -183,7 +186,8 @@ async def _handle_membership_created(db: AsyncSession, data: dict):
         user_id=mem_data.public_user_data.user_id,
         role=role,
         status="ACTIVE",
-    ).on_conflict_do_update(
+    )
+    stmt = stmt.on_conflict_do_update(
         index_elements=["organization_id", "user_id"],
         set_={"role": stmt.excluded.role, "status": "ACTIVE"},
     )
