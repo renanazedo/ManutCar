@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import json
+import shutil
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
@@ -15,8 +16,13 @@ from typing import List, Tuple, Dict, Any
 def run_command(cmd: List[str]) -> Tuple[int, str, str]:
     """Executa um comando e retorna (returncode, stdout, stderr)."""
     try:
+        # No Windows, shutil.which resolve .cmd/.exe automaticamente
+        resolved_cmd = [shutil.which(c) or c for c in cmd]
+        if not resolved_cmd[0]:
+            return -1, "", f"{cmd[0]} not found in PATH"
+        
         result = subprocess.run(
-            cmd,
+            resolved_cmd,
             capture_output=True,
             text=True,
             timeout=10
