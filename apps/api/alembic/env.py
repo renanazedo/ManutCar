@@ -10,12 +10,20 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # Adicionar o diretório raiz do projeto ao path para importar módulos da API
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+# apps/api/alembic/env.py -> parents[3] = raiz do projeto
+project_root = Path(__file__).resolve().parents[3]
+sys.path.append(str(project_root))
 
-# Importar configurações e modelos da API
-from app.core.config import get_settings
-from app.db.base import Base
-import app.models  # noqa: F401 - registra todos os modelos no Base.metadata
+try:
+    # Importar configurações e modelos da API
+    from app.core.config import get_settings
+    from app.db.base import Base
+    import app.models  # noqa: F401 - registra todos os modelos no Base.metadata
+except ImportError as e:
+    raise RuntimeError(
+        f"Erro ao importar módulos da API. Verifique se o path '{project_root}' "
+        f"está correto e se a estrutura 'app/' existe. Erro original: {e}"
+    ) from e
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -33,8 +41,14 @@ target_metadata = Base.metadata
 
 def get_url() -> str:
     """Obtém a URL do banco de dados das configurações da API."""
-    settings = get_settings()
-    return settings.async_database_url
+    try:
+        settings = get_settings()
+        return settings.async_database_url
+    except Exception as e:
+        raise RuntimeError(
+            "Falha ao obter configurações da API. Verifique se o arquivo .env "
+            "existe e contém DATABASE_URL."
+        ) from e
 
 
 def run_migrations_offline() -> None:
