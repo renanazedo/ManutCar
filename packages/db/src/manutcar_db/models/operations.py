@@ -63,9 +63,9 @@ class OdometerReading(UUIDMixin, TimestampMixin, Base):
         comment="Flag indicando se a leitura foi marcada como anomalia",
     )
 
-    # Relationships
-    vehicle: Mapped["Vehicle"] = relationship(back_populates="odometer_readings")
-    recorded_by: Mapped["User"] = relationship(back_populates="odometer_readings")
+    # Relationships - unidirectional (no back_populates on Vehicle/User)
+    vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
+    recorded_by: Mapped["User"] = relationship(lazy="raise")
 
     def __repr__(self) -> str:
         return f"<OdometerReading(vehicle_id={self.vehicle_id}, odometer_km={self.odometer_km}, recorded_at={self.recorded_at})>"
@@ -136,12 +136,12 @@ class FuelLog(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         comment="Data/hora do abastecimento (UTC)",
     )
 
-    # Relationships
-    vehicle: Mapped["Vehicle"] = relationship(back_populates="fuel_logs")
-    organization: Mapped["Organization"] = relationship(back_populates="fuel_logs")
-    driver: Mapped["User"] = relationship(back_populates="fuel_logs")
+    # Relationships - unidirectional (no back_populates on Vehicle/Organization/User)
+    vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
+    organization: Mapped["Organization"] = relationship(lazy="raise")
+    driver: Mapped["User"] = relationship(lazy="raise")
     anomalies: Mapped[list["ConsumptionAnomalyAlert"]] = relationship(
-        back_populates="fuel_log", cascade="all, delete-orphan"
+        back_populates="fuel_log", cascade="all, delete-orphan", lazy="raise"
     )
 
     def __repr__(self) -> str:
@@ -184,8 +184,8 @@ class ConsumptionAnomalyAlert(UUIDMixin, TimestampMixin, Base):
     )
 
     # Relationships
-    vehicle: Mapped["Vehicle"] = relationship(back_populates="consumption_anomalies")
-    fuel_log: Mapped["FuelLog"] = relationship(back_populates="anomalies")
+    vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
+    fuel_log: Mapped["FuelLog"] = relationship(back_populates="anomalies", lazy="raise")
 
     def __repr__(self) -> str:
         return f"<ConsumptionAnomalyAlert(vehicle_id={self.vehicle_id}, fuel_log_id={self.fuel_log_id}, deviation_pct={self.deviation_pct})>"
@@ -217,11 +217,11 @@ class ChecklistTemplate(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
     )
 
     # Relationships
-    organization: Mapped["Organization"] = relationship(back_populates="checklist_templates")
+    organization: Mapped["Organization"] = relationship(lazy="raise")
     items: Mapped[list["ChecklistTemplateItem"]] = relationship(
-        back_populates="template", cascade="all, delete-orphan", order_by="ChecklistTemplateItem.order_index"
+        back_populates="template", cascade="all, delete-orphan", order_by="ChecklistTemplateItem.order_index", lazy="raise"
     )
-    executions: Mapped[list["ChecklistExecution"]] = relationship(back_populates="template")
+    executions: Mapped[list["ChecklistExecution"]] = relationship(back_populates="template", lazy="raise")
 
     def __repr__(self) -> str:
         return f"<ChecklistTemplate(organization_id={self.organization_id}, name={self.name}, type={self.checklist_type})>"
@@ -258,8 +258,8 @@ class ChecklistTemplateItem(UUIDMixin, TimestampMixin, Base):
     )
 
     # Relationships
-    template: Mapped["ChecklistTemplate"] = relationship(back_populates="items")
-    responses: Mapped[list["ChecklistResponseItem"]] = relationship(back_populates="template_item")
+    template: Mapped["ChecklistTemplate"] = relationship(back_populates="items", lazy="raise")
+    responses: Mapped[list["ChecklistResponseItem"]] = relationship(back_populates="template_item", lazy="raise")
 
     __table_args__ = (
         Index("ix_checklist_template_items_template_order", "template_id", "order_index"),
@@ -316,12 +316,12 @@ class ChecklistExecution(UUIDMixin, TimestampMixin, Base):
     )
 
     # Relationships
-    template: Mapped["ChecklistTemplate"] = relationship(back_populates="executions")
-    vehicle: Mapped["Vehicle"] = relationship(back_populates="checklist_executions")
-    organization: Mapped["Organization"] = relationship(back_populates="checklist_executions")
-    driver: Mapped["User"] = relationship(back_populates="checklist_executions")
+    template: Mapped["ChecklistTemplate"] = relationship(back_populates="executions", lazy="raise")
+    vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
+    organization: Mapped["Organization"] = relationship(lazy="raise")
+    driver: Mapped["User"] = relationship(lazy="raise")
     responses: Mapped[list["ChecklistResponseItem"]] = relationship(
-        back_populates="execution", cascade="all, delete-orphan"
+        back_populates="execution", cascade="all, delete-orphan", lazy="raise"
     )
 
     def __repr__(self) -> str:
@@ -361,8 +361,8 @@ class ChecklistResponseItem(UUIDMixin, TimestampMixin, Base):
     )
 
     # Relationships
-    execution: Mapped["ChecklistExecution"] = relationship(back_populates="responses")
-    template_item: Mapped["ChecklistTemplateItem"] = relationship(back_populates="responses")
+    execution: Mapped["ChecklistExecution"] = relationship(back_populates="responses", lazy="raise")
+    template_item: Mapped["ChecklistTemplateItem"] = relationship(back_populates="responses", lazy="raise")
 
     __table_args__ = (
         Index("uq_checklist_response_execution_item", "execution_id", "template_item_id", unique=True),

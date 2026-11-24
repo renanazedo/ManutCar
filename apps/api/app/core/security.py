@@ -27,11 +27,10 @@ def decode_clerk_jwt(token: str) -> dict:
         token,
         signing_key.key,
         algorithms=["RS256"],
-        audience=settings.CLERK_SECRET_KEY,  # Ou configurar audience apropriado
-        options={"verify_aud": False},  # Ajustar conforme necessidade
+        audience=settings.CLERK_SECRET_KEY,
+        options={"verify_aud": False},
     )
     
-    # Validações básicas
     if "sub" not in payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -62,9 +61,8 @@ async def get_current_auth_context(
     payload = decode_clerk_jwt(token)
     
     clerk_user_id = payload.get("sub")
-    clerk_org_id = payload.get("org_id")  # Pode vir no token se usuário estiver em uma org específica
+    clerk_org_id = payload.get("org_id")
     
-    # Busca User ativo
     user_result = await db.execute(
         select(User).where(
             User.clerk_user_id == clerk_user_id,
@@ -80,10 +78,6 @@ async def get_current_auth_context(
             detail="Usuário não encontrado ou inativo",
         )
     
-    # Busca OrganizationMember ativo com Organization ativa
-    # Se clerk_org_id veio no token, tenta filtrar por essa organização
-    # Senão, prioriza personal workspace
-    
     query = (
         select(OrganizationMember, Organization)
         .join(Organization, OrganizationMember.organization_id == Organization.id)
@@ -96,18 +90,12 @@ async def get_current_auth_context(
     )
     
     if clerk_org_id:
-        # Tenta converter clerk_org_id para UUID se for UUID válido
-        # Organization NÃO possui campo clerk_org_id (conforme identity.py)
-        # Se for UUID válido, filtra por Organization.id == org_uuid
-        # Se não for UUID válido, filtra por Organization.is_personal_workspace.is_(False)
         try:
             org_uuid = uuid.UUID(clerk_org_id)
             query = query.where(Organization.id == org_uuid)
         except ValueError:
-            # Não é UUID válido - busca primeira organização não-pessoal vinculada ao usuário
             query = query.where(Organization.is_personal_workspace.is_(False))
     else:
-        # Prioriza personal workspace
         query = query.where(Organization.is_personal_workspace.is_(True))
     
     result = await db.execute(query)
@@ -145,6 +133,22 @@ def require_roles(*allowed_roles: OrgRole):
     return role_checker
 
 
+def _get_permission_column(permission: str):
+    """Mapeia string de permissão para coluna booleana do VehicleAccessPermission."""
+    permission_map = {
+        "view_maintenance": VehicleAccessPermission.can_view_maintenance,
+        "edit_maintenance": VehicleAccessPermission.can_edit_maintenance,
+        "view_financial": VehicleAccessPermission.can_view_financial,
+        "edit_financial": VehicleAccessPermission.can_edit_financial,
+        "view_telemetry": VehicleAccessPermission.can_view_telemetry,
+        "manage_drivers": VehicleAccessPermission.can_manage_drivers,
+    }
+    column = permission_map.get(permission)
+    if column is None:
+        raise ValueError(f"Permissão desconhecida: {permission}")
+    return column
+
+
 async def verify_vehicle_access(
     db: AsyncSession,
     auth: AuthContext,
@@ -157,7 +161,6 @@ async def verify_vehicle_access(
     b) Permite se current_owner pertence à auth.organization OU existe VehicleManagementAgreement ativo
     c) Se required_permission informado, checa VehicleAccessPermission
     """
-    # a) Busca Vehicle ativo
     vehicle_result = await db.execute(
         select(Vehicle).where(
             Vehicle.id == vehicle_id,
@@ -172,14 +175,10 @@ async def verify_vehicle_access(
             detail="Veículo não encontrado",
         )
     
-    # b) Verifica se current_owner pertence à organização
-    # Assumindo que Vehicle tem relationship current_owner -> VehicleOwner
-    # e VehicleOwner tem organization_id
     owner_org_match = False
     if vehicle.current_owner and vehicle.current_owner.organization_id == auth.organization.id:
         owner_org_match = True
     
-    # Ou verifica VehicleManagementAgreement ativo
     agreement_result = await db.execute(
         select(VehicleManagementAgreement).where(
             VehicleManagementAgreement.vehicle_id == vehicle.id,
@@ -198,12 +197,12 @@ async def verify_vehicle_access(
             detail="Organização não tem acesso a este veículo",
         )
     
-    # c) Se required_permission informado, checa VehicleAccessPermission
     if required_permission and has_agreement:
+        perm_column = _get_permission_column(required_permission)
         perm_result = await db.execute(
             select(VehicleAccessPermission).where(
                 VehicleAccessPermission.agreement_id == agreement.id,
-                VehicleAccessPermission.permission == required_permission,
+                perm_column.is_(True),
             )
         )
         permission = perm_result.scalar_one_or_none()

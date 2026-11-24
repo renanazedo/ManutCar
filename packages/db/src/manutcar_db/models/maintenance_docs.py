@@ -36,15 +36,9 @@ class ServiceProvider(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         comment="Telefone de contato",
     )
 
-    organization: Mapped["Organization"] = relationship(
-        "Organization",
-        back_populates="service_providers",
-        lazy="raise",
-    )
+    organization: Mapped["Organization"] = relationship(lazy="raise")
     work_orders: Mapped[list["WorkOrder"]] = relationship(
-        "WorkOrder",
-        back_populates="service_provider",
-        lazy="raise",
+        back_populates="service_provider", lazy="raise"
     )
 
     def __repr__(self) -> str:
@@ -74,15 +68,9 @@ class MaintenancePlan(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         comment="Intervalo em dias",
     )
 
-    organization: Mapped["Organization"] = relationship(
-        "Organization",
-        back_populates="maintenance_plans",
-        lazy="raise",
-    )
+    organization: Mapped["Organization"] = relationship(lazy="raise")
     vehicle_schedules: Mapped[list["VehicleMaintenanceSchedule"]] = relationship(
-        "VehicleMaintenanceSchedule",
-        back_populates="plan",
-        lazy="raise",
+        back_populates="plan", lazy="raise"
     )
 
     def __repr__(self) -> str:
@@ -123,16 +111,8 @@ class VehicleMaintenanceSchedule(UUIDMixin, TimestampMixin, Base):
         comment="Próxima data prevista",
     )
 
-    vehicle: Mapped["Vehicle"] = relationship(
-        "Vehicle",
-        back_populates="maintenance_schedules",
-        lazy="raise",
-    )
-    plan: Mapped["MaintenancePlan"] = relationship(
-        "MaintenancePlan",
-        back_populates="vehicle_schedules",
-        lazy="raise",
-    )
+    vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
+    plan: Mapped["MaintenancePlan"] = relationship(back_populates="vehicle_schedules", lazy="raise")
 
     __table_args__ = (
         UniqueConstraint("vehicle_id", "plan_id", name="uq_vehicle_maintenance_schedule_vehicle_plan"),
@@ -187,25 +167,11 @@ class MaintenanceRequest(UUIDMixin, TimestampMixin, Base):
         comment="Status: OPEN, IN_PROGRESS, COMPLETED, CANCELLED",
     )
 
-    vehicle: Mapped["Vehicle"] = relationship(
-        "Vehicle",
-        back_populates="maintenance_requests",
-        lazy="raise",
-    )
-    organization: Mapped["Organization"] = relationship(
-        "Organization",
-        back_populates="maintenance_requests",
-        lazy="raise",
-    )
-    requested_by: Mapped["User"] = relationship(
-        "User",
-        back_populates="maintenance_requests",
-        lazy="raise",
-    )
+    vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
+    organization: Mapped["Organization"] = relationship(lazy="raise")
+    requested_by: Mapped["User"] = relationship(lazy="raise")
     source_checklist: Mapped[Optional["ChecklistExecution"]] = relationship(
-        "ChecklistExecution",
-        back_populates="maintenance_requests",
-        lazy="raise",
+        back_populates="maintenance_requests", lazy="raise"
     )
 
     def __repr__(self) -> str:
@@ -263,26 +229,13 @@ class WorkOrder(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         comment="Data/hora de conclusão",
     )
 
-    vehicle: Mapped["Vehicle"] = relationship(
-        "Vehicle",
-        back_populates="work_orders",
-        lazy="raise",
-    )
-    organization: Mapped["Organization"] = relationship(
-        "Organization",
-        back_populates="work_orders",
-        lazy="raise",
-    )
+    vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
+    organization: Mapped["Organization"] = relationship(lazy="raise")
     service_provider: Mapped[Optional["ServiceProvider"]] = relationship(
-        "ServiceProvider",
-        back_populates="work_orders",
-        lazy="raise",
+        back_populates="work_orders", lazy="raise"
     )
     items: Mapped[list["WorkOrderItem"]] = relationship(
-        "WorkOrderItem",
-        back_populates="work_order",
-        lazy="raise",
-        cascade="all, delete-orphan",
+        back_populates="work_order", lazy="raise", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -327,11 +280,7 @@ class WorkOrderItem(UUIDMixin, TimestampMixin, Base):
         comment="Garantia em quilômetros",
     )
 
-    work_order: Mapped["WorkOrder"] = relationship(
-        "WorkOrder",
-        back_populates="items",
-        lazy="raise",
-    )
+    work_order: Mapped["WorkOrder"] = relationship(back_populates="items", lazy="raise")
 
     def __repr__(self) -> str:
         return f"<WorkOrderItem(id={self.id}, work_order_id={self.work_order_id}, item_type={self.item_type!r})>"
@@ -363,11 +312,7 @@ class DriverLicense(UUIDMixin, TimestampMixin, Base):
         comment="Data de validade da CNH",
     )
 
-    user: Mapped["User"] = relationship(
-        "User",
-        back_populates="driver_license",
-        lazy="raise",
-    )
+    user: Mapped["User"] = relationship(back_populates="driver_license", lazy="raise")
 
     def __repr__(self) -> str:
         return f"<DriverLicense(user_id={self.user_id}, license_number={self.license_number!r})>"
@@ -403,21 +348,10 @@ class VehicleObligation(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         comment="Valor total da obrigação",
     )
 
-    vehicle: Mapped["Vehicle"] = relationship(
-        "Vehicle",
-        back_populates="obligations",
-        lazy="raise",
-    )
-    organization: Mapped["Organization"] = relationship(
-        "Organization",
-        back_populates="vehicle_obligations",
-        lazy="raise",
-    )
+    vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
+    organization: Mapped["Organization"] = relationship(lazy="raise")
     installments: Mapped[list["ObligationInstallment"]] = relationship(
-        "ObligationInstallment",
-        back_populates="obligation",
-        lazy="raise",
-        cascade="all, delete-orphan",
+        back_populates="obligation", lazy="raise", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
@@ -457,11 +391,7 @@ class ObligationInstallment(UUIDMixin, TimestampMixin, Base):
         comment="Data/hora do pagamento",
     )
 
-    obligation: Mapped["VehicleObligation"] = relationship(
-        "VehicleObligation",
-        back_populates="installments",
-        lazy="raise",
-    )
+    obligation: Mapped["VehicleObligation"] = relationship(back_populates="installments", lazy="raise")
 
     __table_args__ = (
         UniqueConstraint("obligation_id", "installment_number", name="uq_obligation_installment_obligation_number"),
@@ -523,21 +453,9 @@ class TrafficTicket(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         comment="Status da indicação: PENDING, INDICATED, PAID, CONTESTED, EXPIRED",
     )
 
-    vehicle: Mapped["Vehicle"] = relationship(
-        "Vehicle",
-        back_populates="traffic_tickets",
-        lazy="raise",
-    )
-    organization: Mapped["Organization"] = relationship(
-        "Organization",
-        back_populates="traffic_tickets",
-        lazy="raise",
-    )
-    suggested_driver: Mapped[Optional["User"]] = relationship(
-        "User",
-        back_populates="suggested_traffic_tickets",
-        lazy="raise",
-    )
+    vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
+    organization: Mapped["Organization"] = relationship(lazy="raise")
+    suggested_driver: Mapped[Optional["User"]] = relationship(lazy="raise")
 
     def __repr__(self) -> str:
         return f"<TrafficTicket(id={self.id}, vehicle_id={self.vehicle_id}, code={self.infraction_code!r})>"

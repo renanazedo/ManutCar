@@ -416,7 +416,6 @@ class VehicleAssignment(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         lazy="selectin",
     )
     driver_user: Mapped["User"] = relationship(
-        back_populates="vehicle_assignments",
         lazy="selectin",
     )
 
