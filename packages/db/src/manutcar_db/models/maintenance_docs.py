@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
@@ -23,12 +23,12 @@ class ServiceProvider(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID da organização proprietária",
+        comment="ID da organizaÃ§Ã£o proprietÃ¡ria",
     )
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        comment="Nome do prestador de serviço",
+        comment="Nome do prestador de serviÃ§o",
     )
     document_number: Mapped[Optional[str]] = mapped_column(
         String(20),
@@ -43,7 +43,7 @@ class ServiceProvider(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
 
     organization: Mapped["Organization"] = relationship(lazy="raise")
     work_orders: Mapped[list["WorkOrder"]] = relationship(
-        back_populates="service_provider", lazy="raise"
+        lazy="raise"
     )
 
     def __repr__(self) -> str:
@@ -57,16 +57,16 @@ class MaintenancePlan(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID da organização proprietária",
+        comment="ID da organizaÃ§Ã£o proprietÃ¡ria",
     )
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        comment="Nome do plano de manutenção",
+        comment="Nome do plano de manutenÃ§Ã£o",
     )
     interval_km: Mapped[Optional[int]] = mapped_column(
         nullable=True,
-        comment="Intervalo em quilômetros",
+        comment="Intervalo em quilÃ´metros",
     )
     interval_days: Mapped[Optional[int]] = mapped_column(
         nullable=True,
@@ -75,7 +75,7 @@ class MaintenancePlan(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
 
     organization: Mapped["Organization"] = relationship(lazy="raise")
     vehicle_schedules: Mapped[list["VehicleMaintenanceSchedule"]] = relationship(
-        back_populates="plan", lazy="raise"
+        lazy="raise"
     )
 
     def __repr__(self) -> str:
@@ -89,35 +89,35 @@ class VehicleMaintenanceSchedule(UUIDMixin, TimestampMixin, Base):
         PG_UUID(as_uuid=True),
         ForeignKey("vehicles.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID do veículo",
+        comment="ID do veÃ­culo",
     )
     plan_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("maintenance_plans.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID do plano de manutenção",
+        comment="ID do plano de manutenÃ§Ã£o",
     )
     last_executed_km: Mapped[Optional[int]] = mapped_column(
         nullable=True,
-        comment="Quilometragem da última execução",
+        comment="Quilometragem da Ãºltima execuÃ§Ã£o",
     )
     last_executed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
-        comment="Data/hora da última execução",
+        comment="Data/hora da Ãºltima execuÃ§Ã£o",
     )
     next_due_km: Mapped[Optional[int]] = mapped_column(
         nullable=True,
-        comment="Próxima quilometragem prevista",
+        comment="PrÃ³xima quilometragem prevista",
     )
     next_due_date: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
-        comment="Próxima data prevista",
+        comment="PrÃ³xima data prevista",
     )
 
     vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
-    plan: Mapped["MaintenancePlan"] = relationship(back_populates="vehicle_schedules", lazy="raise")
+    plan: Mapped["MaintenancePlan"] = relationship(lazy="raise")
 
     __table_args__ = (
         UniqueConstraint("vehicle_id", "plan_id", name="uq_vehicle_maintenance_schedule_vehicle_plan"),
@@ -134,30 +134,30 @@ class MaintenanceRequest(UUIDMixin, TimestampMixin, Base):
         PG_UUID(as_uuid=True),
         ForeignKey("vehicles.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID do veículo",
+        comment="ID do veÃ­culo",
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID da organização",
+        comment="ID da organizaÃ§Ã£o",
     )
     requested_by_user_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID do usuário que solicitou",
+        comment="ID do usuÃ¡rio que solicitou",
     )
     source_checklist_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("checklist_executions.id", ondelete="SET NULL"),
         nullable=True,
-        comment="ID da execução de checklist que originou a solicitação",
+        comment="ID da execuÃ§Ã£o de checklist que originou a solicitaÃ§Ã£o",
     )
     description: Mapped[str] = mapped_column(
         Text,
         nullable=False,
-        comment="Descrição da solicitação",
+        comment="DescriÃ§Ã£o da solicitaÃ§Ã£o",
     )
     priority: Mapped[str] = mapped_column(
         String(20),
@@ -176,7 +176,7 @@ class MaintenanceRequest(UUIDMixin, TimestampMixin, Base):
     organization: Mapped["Organization"] = relationship(lazy="raise")
     requested_by: Mapped["User"] = relationship(lazy="raise")
     source_checklist: Mapped[Optional["ChecklistExecution"]] = relationship(
-        back_populates="maintenance_requests", lazy="raise"
+        lazy="raise"
     )
 
     def __repr__(self) -> str:
@@ -190,28 +190,28 @@ class WorkOrder(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         PG_UUID(as_uuid=True),
         ForeignKey("vehicles.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID do veículo",
+        comment="ID do veÃ­culo",
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID da organização",
+        comment="ID da organizaÃ§Ã£o",
     )
     service_provider_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("service_providers.id", ondelete="SET NULL"),
         nullable=True,
-        comment="ID do prestador de serviço",
+        comment="ID do prestador de serviÃ§o",
     )
     maintenance_type: Mapped[MaintenanceType] = mapped_column(
         nullable=False,
-        comment="Tipo de manutenção",
+        comment="Tipo de manutenÃ§Ã£o",
     )
     status: Mapped[WorkOrderStatus] = mapped_column(
         nullable=False,
         default=WorkOrderStatus.OPEN,
-        comment="Status da ordem de serviço",
+        comment="Status da ordem de serviÃ§o",
     )
     odometer_km: Mapped[int] = mapped_column(
         nullable=False,
@@ -231,13 +231,13 @@ class WorkOrder(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
     completed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
-        comment="Data/hora de conclusão",
+        comment="Data/hora de conclusÃ£o",
     )
 
     vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
     organization: Mapped["Organization"] = relationship(lazy="raise")
     service_provider: Mapped[Optional["ServiceProvider"]] = relationship(
-        back_populates="work_orders", lazy="raise"
+        lazy="raise"
     )
     items: Mapped[list["WorkOrderItem"]] = relationship(
         back_populates="work_order", lazy="raise", cascade="all, delete-orphan"
@@ -254,7 +254,7 @@ class WorkOrderItem(UUIDMixin, TimestampMixin, Base):
         PG_UUID(as_uuid=True),
         ForeignKey("work_orders.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID da ordem de serviço",
+        comment="ID da ordem de serviÃ§o",
     )
     item_type: Mapped[str] = mapped_column(
         String(50),
@@ -264,7 +264,7 @@ class WorkOrderItem(UUIDMixin, TimestampMixin, Base):
     description: Mapped[str] = mapped_column(
         Text,
         nullable=False,
-        comment="Descrição do item",
+        comment="DescriÃ§Ã£o do item",
     )
     quantity: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
@@ -274,7 +274,7 @@ class WorkOrderItem(UUIDMixin, TimestampMixin, Base):
     unit_price: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
         nullable=False,
-        comment="Preço unitário",
+        comment="PreÃ§o unitÃ¡rio",
     )
     warranty_days: Mapped[Optional[int]] = mapped_column(
         nullable=True,
@@ -282,7 +282,7 @@ class WorkOrderItem(UUIDMixin, TimestampMixin, Base):
     )
     warranty_km: Mapped[Optional[int]] = mapped_column(
         nullable=True,
-        comment="Garantia em quilômetros",
+        comment="Garantia em quilÃ´metros",
     )
 
     work_order: Mapped["WorkOrder"] = relationship(back_populates="items", lazy="raise")
@@ -299,12 +299,12 @@ class DriverLicense(UUIDMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
-        comment="ID do usuário (motorista)",
+        comment="ID do usuÃ¡rio (motorista)",
     )
     license_number: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        comment="Número da CNH",
+        comment="NÃºmero da CNH",
     )
     category: Mapped[str] = mapped_column(
         String(10),
@@ -317,7 +317,7 @@ class DriverLicense(UUIDMixin, TimestampMixin, Base):
         comment="Data de validade da CNH",
     )
 
-    user: Mapped["User"] = relationship(back_populates="driver_license", lazy="raise")
+    user: Mapped["User"] = relationship(lazy="raise")
 
     def __repr__(self) -> str:
         return f"<DriverLicense(user_id={self.user_id}, license_number={self.license_number!r})>"
@@ -330,33 +330,33 @@ class VehicleObligation(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         PG_UUID(as_uuid=True),
         ForeignKey("vehicles.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID do veículo",
+        comment="ID do veÃ­culo",
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID da organização",
+        comment="ID da organizaÃ§Ã£o",
     )
     obligation_type: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
-        comment="Tipo de obrigação: IPVA, LICENSING, INSPECTION, INSURANCE, OTHER",
+        comment="Tipo de obrigaÃ§Ã£o: IPVA, LICENSING, INSPECTION, INSURANCE, OTHER",
     )
     reference_year: Mapped[int] = mapped_column(
         nullable=False,
-        comment="Ano de referência",
+        comment="Ano de referÃªncia",
     )
     total_amount: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
         nullable=False,
-        comment="Valor total da obrigação",
+        comment="Valor total da obrigaÃ§Ã£o",
     )
 
     vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
     organization: Mapped["Organization"] = relationship(lazy="raise")
     installments: Mapped[list["ObligationInstallment"]] = relationship(
-        back_populates="obligation", lazy="raise", cascade="all, delete-orphan"
+        lazy="raise", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
@@ -374,11 +374,11 @@ class ObligationInstallment(UUIDMixin, TimestampMixin, Base):
         PG_UUID(as_uuid=True),
         ForeignKey("vehicle_obligations.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID da obrigação",
+        comment="ID da obrigaÃ§Ã£o",
     )
     installment_number: Mapped[int] = mapped_column(
         nullable=False,
-        comment="Número da parcela",
+        comment="NÃºmero da parcela",
     )
     due_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -396,7 +396,7 @@ class ObligationInstallment(UUIDMixin, TimestampMixin, Base):
         comment="Data/hora do pagamento",
     )
 
-    obligation: Mapped["VehicleObligation"] = relationship(back_populates="installments", lazy="raise")
+    obligation: Mapped["VehicleObligation"] = relationship(lazy="raise")
 
     __table_args__ = (
         UniqueConstraint("obligation_id", "installment_number", name="uq_obligation_installment_obligation_number"),
@@ -413,34 +413,34 @@ class TrafficTicket(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         PG_UUID(as_uuid=True),
         ForeignKey("vehicles.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID do veículo",
+        comment="ID do veÃ­culo",
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        comment="ID da organização",
+        comment="ID da organizaÃ§Ã£o",
     )
     suggested_driver_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
-        comment="ID do condutor sugerido para indicação",
+        comment="ID do condutor sugerido para indicaÃ§Ã£o",
     )
     infraction_code: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        comment="Código da infração",
+        comment="CÃ³digo da infraÃ§Ã£o",
     )
     infraction_datetime: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        comment="Data/hora da infração",
+        comment="Data/hora da infraÃ§Ã£o",
     )
     indication_deadline: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
-        comment="Prazo para indicação do condutor",
+        comment="Prazo para indicaÃ§Ã£o do condutor",
     )
     points: Mapped[int] = mapped_column(
         nullable=False,
@@ -455,7 +455,7 @@ class TrafficTicket(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         String(20),
         nullable=False,
         default="PENDING",
-        comment="Status da indicação: PENDING, INDICATED, PAID, CONTESTED, EXPIRED",
+        comment="Status da indicaÃ§Ã£o: PENDING, INDICATED, PAID, CONTESTED, EXPIRED",
     )
 
     vehicle: Mapped["Vehicle"] = relationship(lazy="raise")
