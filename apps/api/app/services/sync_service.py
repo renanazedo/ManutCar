@@ -136,14 +136,15 @@ async def _handle_user_created(db: AsyncSession, data: dict):
         )
     )
     if not personal_org.scalar_one_or_none():
-        # 1. Cria Organization pessoal
+        # 1. Cria Organization pessoal COM ID EXPLÍCITO
         org_name = f"Minha Operação - {full_name or user.clerk_user_id[:8]}"
         org = Organization(
+            id=uuid.uuid4(),  # ID explícito para garantir que não seja None no AuditLog
             name=org_name,
             is_personal_workspace=True,
         )
         db.add(org)
-        await db.flush()
+        await db.flush()  # Garante que org.id está populado
 
         await record_audit_log(
             db,
@@ -160,14 +161,16 @@ async def _handle_user_created(db: AsyncSession, data: dict):
         settings = OrganizationSettings(organization_id=org.id)
         db.add(settings)
 
-        # 3. Cria OrganizationMember como OWNER
+        # 3. Cria OrganizationMember como OWNER COM ID EXPLÍCITO
         member = OrganizationMember(
+            id=uuid.uuid4(),  # ID explícito para garantir que não seja None no AuditLog
             organization_id=org.id,
             user_id=user.id,
             role=OrgRole.OWNER,
             is_active=True,
         )
         db.add(member)
+        await db.flush()  # Garante que member.id está populado
 
         await record_audit_log(
             db,
@@ -222,11 +225,16 @@ async def _handle_user_updated(db: AsyncSession, data: dict):
 
 
 async def _handle_user_deleted(db: AsyncSession, data: dict):
-    from packages.schemas.src.manutcar.schemas.webhook import ClerkUserData
-    user_data = ClerkUserData(**data)
+    # No evento user.deleted, o Clerk envia apenas {"id": "...", "deleted": true}
+    # Extraímos o clerk_user_id diretamente do campo "id" do data
+    clerk_user_id = data.get("id")
+    
+    if not clerk_user_id:
+        print("Webhook Clerk user.deleted: campo 'id' ausente no payload")
+        return
 
     existing_user = await db.execute(
-        select(User).where(User.clerk_user_id == user_data.id)
+        select(User).where(User.clerk_user_id == clerk_user_id)
     )
     user = existing_user.scalar_one_or_none()
 
@@ -301,7 +309,7 @@ async def _handle_org_created(db: AsyncSession, data: dict):
         org = Organization(
             id=org_data.id,
             name=org_data.name,
-            document_number=org_data.slug if org_data.slug else None,  # Armazena slug/clerk_org_id em document_number se for CPF/CNPJ ou mantém name
+            document_number=org_data.slug if org_data.slug else None,
             is_personal_workspace=False,
         )
         db.add(org)
