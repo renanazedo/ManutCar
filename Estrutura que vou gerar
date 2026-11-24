@@ -1,0 +1,7 @@
+prompts/
+├── 01-estrutura-diretorios-monorepo.md
+├── 02-configuracao-raiz-monorepo.md
+├── 03-quality-gates-git-hooks.md
+├── 04-backend-inicial-api.md
+├── 05-frontend-inicial-web.md
+└── 06-infraestrutura-cicd.md
