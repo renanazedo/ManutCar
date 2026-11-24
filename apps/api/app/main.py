@@ -4,8 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 
-from app.core.config import settings
-from app.api.v1.router import api_router
+from apps.api.app.core.config import settings
+from apps.api.app.api.v1.router import api_router
 
 structlog.configure(
     processors=[

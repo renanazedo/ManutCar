@@ -27,6 +27,7 @@ try:
     from apps.api.app.services.sync_service import process_clerk_webhook
     from apps.api.app.api.v1.endpoints.webhooks import verify_clerk_signature, clerk_webhook
     from apps.api.app.api.v1.router import api_router
+    from apps.api.app.main import app as fastapi_app
     from packages.schemas.src.manutcar.schemas.webhook import (
         ClerkUserData,
         ClerkOrganizationData,
@@ -36,7 +37,7 @@ try:
     from manutcar_db.enums import OrgRole, AuditAction
     from manutcar_db.models.finance_audit import ProcessedWebhookEvent, AuditLog
     from manutcar_db.models.identity import User, Organization, OrganizationMember, OrganizationSettings
-    print("✓ Imports limpos: sync_service.py, webhooks.py, router.py, webhook.py (schemas)")
+    print("✓ Imports limpos: sync_service.py, webhooks.py, router.py, main.py, webhook.py (schemas)")
 except ImportError as e:
     print(f"✗ Falha nos imports: {e}")
     import traceback
@@ -180,13 +181,19 @@ def create_settings(organization_id: uuid.UUID) -> OrganizationSettings:
 # =============================================================================
 
 async def test_imports_and_router():
-    print("--- Teste 1: Imports e validacao de rota ---")
-    from apps.api.app.main import app as _fastapi_app
-    routes = [getattr(route, "path", "") for route in _fastapi_app.routes]
-    webhook_routes = [r for r in routes if "webhooks" in r]
-    assert "/api/v1/webhooks/clerk" in webhook_routes, f"Rota /api/v1/webhooks/clerk nao encontrada. Rotas: {routes}"
-    assert "/api/v1/webhooks/webhooks/clerk" not in webhook_routes, "Duplicacao de prefixo detectada"
-    print("OK: Rota /api/v1/webhooks/clerk registrada corretamente sem duplicacao de prefixo")
+    """Valida imports e registro de rota sem duplicação de prefixo."""
+    print("\n--- Teste 1: Imports e validação de rota ---")
+    
+    # Verifica diretamente no api_router
+    api_router_paths = [r.path for r in api_router.routes if hasattr(r, "path")]
+    assert "/webhooks/clerk" in api_router_paths, f"Rota /webhooks/clerk não encontrada no api_router. Rotas: {api_router_paths}"
+    assert "/webhooks/webhooks/clerk" not in api_router_paths, "Duplicação de prefixo detectada no api_router: /webhooks/webhooks/clerk"
+    
+    # Verifica no app (FastAPI) com prefixo /api/v1
+    app_paths = [r.path for r in fastapi_app.routes if hasattr(r, "path")]
+    assert "/api/v1/webhooks/clerk" in app_paths, f"Rota /api/v1/webhooks/clerk não encontrada no app. Rotas: {app_paths}"
+    
+    print("✓ Rota /webhooks/clerk existe no api_router, /webhooks/webhooks/clerk não existe, e /api/v1/webhooks/clerk existe no app")
     return True
 
 
@@ -402,17 +409,12 @@ async def test_verify_clerk_signature():
     
     from svix import Webhook
     import json
+    from apps.api.app.core.config import settings
     
-    # Gera assinatura válida usando o secret de teste
-    from apps.api.app.core.config import settings as _api_settings
-    from apps.api.app.core.config import settings as _api_settings
-    from apps.api.app.core.config import settings as _api_settings
-    from apps.api.app.core.config import settings as _api_settings
+    # Define o secret conforme instrução
     secret = "whsec_dGVzdF9zZWNyZXRfMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0"
-    _api_settings.CLERK_WEBHOOK_SECRET = secret
-    _api_settings.CLERK_WEBHOOK_SECRET = secret
-    _api_settings.CLERK_WEBHOOK_SECRET = secret
-    _api_settings.CLERK_WEBHOOK_SECRET = secret
+    settings.CLERK_WEBHOOK_SECRET = secret
+    
     wh = Webhook(secret)
     
     payload = {
@@ -421,32 +423,31 @@ async def test_verify_clerk_signature():
         "object": "event"
     }
     payload_bytes = json.dumps(payload).encode()
+    payload_str = payload_bytes.decode("utf-8")
     
-    # Gera headers válidos
-    from datetime import datetime as _dt, timezone as _tz
-    _ts = _dt.now(_tz.utc)
-    _sig = wh.sign('msg_test_svix_001', _ts, payload_bytes.decode('utf-8'))
-    headers = {'svix-id': 'msg_test_svix_001', 'svix-timestamp': str(int(_ts.timestamp())), 'svix-signature': _sig}
-    svix_id = headers["svix-id"]
-    svix_timestamp = headers["svix-timestamp"]
-    svix_signature = headers["svix-signature"]
+    # Gera headers válidos usando wh.sign(svix_id, timestamp, payload_str)
+    svix_id = "msg_test_001"
+    ts = datetime.now(timezone.utc)
+    sig = wh.sign(svix_id, ts, payload_str)
+    
+    headers = {
+        "svix-id": svix_id,
+        "svix-timestamp": str(int(ts.timestamp())),
+        "svix-signature": sig,
+    }
     
     # Mock Request com payload e headers válidos
     mock_request = MagicMock()
     mock_request.body = AsyncMock(return_value=payload_bytes)
-    mock_request.headers = {
-        "svix-id": svix_id,
-        "svix-timestamp": svix_timestamp,
-        "svix-signature": svix_signature,
-    }
+    mock_request.headers = headers
     
-    # Testa assinatura VÁLIDA
+    # Testa assinatura VÁLIDA - executa a função REAL verify_clerk_signature
     try:
         verified_payload = await verify_clerk_signature(
             mock_request,
             svix_id=svix_id,
-            svix_timestamp=svix_timestamp,
-            svix_signature=svix_signature,
+            svix_timestamp=headers["svix-timestamp"],
+            svix_signature=sig,
         )
         assert verified_payload["type"] == "user.created"
         assert verified_payload["data"]["id"] == "clerk_user_123"
@@ -459,7 +460,7 @@ async def test_verify_clerk_signature():
     mock_request_invalid.body = AsyncMock(return_value=payload_bytes)
     mock_request_invalid.headers = {
         "svix-id": svix_id,
-        "svix-timestamp": svix_timestamp,
+        "svix-timestamp": headers["svix-timestamp"],
         "svix-signature": "invalid_signature",
     }
     
@@ -467,7 +468,7 @@ async def test_verify_clerk_signature():
         await verify_clerk_signature(
             mock_request_invalid,
             svix_id=svix_id,
-            svix_timestamp=svix_timestamp,
+            svix_timestamp=headers["svix-timestamp"],
             svix_signature="invalid_signature",
         )
         assert False, "Assinatura inválida deveria levantar HTTPException 400"
@@ -482,16 +483,16 @@ async def test_verify_clerk_signature():
     mock_request_bad_json.body = AsyncMock(return_value=b"not json")
     mock_request_bad_json.headers = {
         "svix-id": svix_id,
-        "svix-timestamp": svix_timestamp,
-        "svix-signature": svix_signature,
+        "svix-timestamp": headers["svix-timestamp"],
+        "svix-signature": sig,
     }
     
     try:
         await verify_clerk_signature(
             mock_request_bad_json,
             svix_id=svix_id,
-            svix_timestamp=svix_timestamp,
-            svix_signature=svix_signature,
+            svix_timestamp=headers["svix-timestamp"],
+            svix_signature=sig,
         )
         assert False, "Payload não-JSON deveria levantar HTTPException 400"
     except Exception as e:
