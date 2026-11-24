@@ -2,7 +2,7 @@
 Schemas Pydantic v2 para validação de Payloads de Webhook (Clerk).
 """
 from typing import Any, List, Optional
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class ClerkEmailAddress(BaseModel):
@@ -18,6 +18,8 @@ class ClerkPhoneNumber(BaseModel):
 
 
 class ClerkUserData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     id: str
     external_id: Optional[str] = None
     username: Optional[str] = None
@@ -28,17 +30,19 @@ class ClerkUserData(BaseModel):
     image_url: Optional[str] = None
     unsafe_metadata: dict = Field(default_factory=dict)
     public_metadata: dict = Field(default_factory=dict)
-    created_at: int
-    updated_at: int
+    created_at: Optional[int] = None
+    updated_at: Optional[int] = None
 
 
 class ClerkOrganizationData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     id: str
     name: str
-    slug: str
-    created_by: str
-    created_at: int
-    updated_at: int
+    slug: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: Optional[int] = None
+    updated_at: Optional[int] = None
 
 
 class ClerkPublicUserData(BaseModel):
@@ -47,12 +51,14 @@ class ClerkPublicUserData(BaseModel):
 
 
 class ClerkOrganizationMembershipData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     id: str
     role: str  # 'admin' | 'member'
     organization: ClerkOrganizationData
     public_user_data: ClerkPublicUserData
-    created_at: int
-    updated_at: int
+    created_at: Optional[int] = None
+    updated_at: Optional[int] = None
 
 
 class ClerkWebhookPayload(BaseModel):

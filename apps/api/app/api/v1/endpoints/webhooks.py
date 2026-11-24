@@ -5,14 +5,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from svix import Webhook, WebhookVerificationError
 
-from app.core.config import settings
-from packages.db.src.manutcar.db.session import get_db_session
+from apps.api.app.core.config import settings
+from apps.api.app.db.session import get_db
+from apps.api.app.services.sync_service import process_clerk_webhook
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
-
-# Instância do Webhook Svix (verificação de assinatura)
-# CLERK_WEBHOOK_SECRET vem do .env (whsec_...)
-wh = Webhook(settings.CLERK_WEBHOOK_SECRET)
 
 
 async def verify_clerk_signature(
@@ -23,17 +20,18 @@ async def verify_clerk_signature(
 ) -> dict[str, Any]:
     """
     Dependency que verifica a assinatura Svix e retorna o payload JSON válido.
+    Instancia Webhook aqui (não no import) para não quebrar quando CLERK_WEBHOOK_SECRET estiver vazio.
     Levanta 400 se assinatura inválida ou payload malformado.
     """
     payload_bytes = await request.body()
     try:
-        # Svix espera headers como dicionário
+        # Instancia Webhook dentro da função
+        wh = Webhook(settings.CLERK_WEBHOOK_SECRET)
         headers = {
             "svix-id": svix_id,
             "svix-timestamp": svix_timestamp,
             "svix-signature": svix_signature,
         }
-        # verify retorna o payload dict se válido
         verified_payload = wh.verify(payload_bytes, headers)
         return verified_payload
     except WebhookVerificationError as e:
@@ -50,28 +48,31 @@ async def verify_clerk_signature(
 
 @router.post("/clerk", status_code=status.HTTP_200_OK)
 async def clerk_webhook(
+    request: Request,
     payload: dict = Depends(verify_clerk_signature),
-    db: AsyncSession = Depends(get_db_session),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Recebe eventos do Clerk (user.created, organization.created, organizationMembership.created).
-    Processa de forma idempotente (upsert) para sincronizar tabelas locais.
+    Processa de forma idempotente via process_clerk_webhook.
     """
     event_type = payload.get("type")
     data = payload.get("data", {})
+    svix_id = request.headers.get("svix-id")
 
-    # Import local para evitar circular dependency no topo do arquivo
-    from app.services.sync_service import sync_clerk_event
+    if not svix_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Header svix-id ausente",
+        )
 
     try:
-        await sync_clerk_event(db, event_type, data)
+        result = await process_clerk_webhook(db, svix_id, event_type, data)
         await db.commit()
+        return result
     except Exception as e:
         await db.rollback()
         # Log estruturado seria ideal aqui (structlog)
         print(f"ERRO Webhook Clerk [{event_type}]: {e}")
         # Retornamos 200 mesmo em erro de negócio para não travar retry do Clerk
-        # mas idealmente teríamos uma Dead Letter Queue (Inc 2)
         return {"status": "error", "message": str(e)}
-
-    return {"status": "success", "event": event_type}
