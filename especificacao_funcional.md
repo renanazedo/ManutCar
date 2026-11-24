@@ -2,7 +2,7 @@
 
 **Código do Documento:** MC-DOC-ESP-001  
 **Status:** Consolidado para Revisão Final  
-**Versão:** 2.0  
+**Versão:** 2.1  
 **Referência:** MC-DOC-VIS-001 (`VISÃO_DO_PRODUTO.md`)  
 
 ---
@@ -16,6 +16,9 @@ O **ManutCar** opera sob uma arquitetura **multiorganização, multiusuário e m
 4. **MC-FIN:** Integração Financeira (Uber e 99) e Receitas
 5. **MC-DOC:** Documentação, Multas e IPVA
 6. **MC-CHK:** Checklist e Inspeção Diária
+
+> **Contexto de Infraestrutura (Não Funcional):**  
+> A especificação funcional acima descreve a **Arquitetura Definitiva do Produto (Camada A)**. A implementação inicial (Incremento 1 - MVP Core) será executada sobre a **Infraestrutura Inicial de Desenvolvimento e Validação (Camada B - Custo Zero)**, conforme detalhado em `MC-DOC-DEC-001` (Decisões `DEC-020` a `DEC-023`) e `VISÃO_DO_PRODUTO.md` (Seção 8). As regras de negócio, entidades e fluxos funcionais **não sofrem alteração** devido à infraestrutura temporária; apenas recursos não essenciais ao MVP (Redis, Workers assíncronos, WhatsApp, App Nativo, Integrações Externas/APIs) são adiados conforme `ROADMAP.md` (Seção 7) e `DEC-021`.
 
 ---
 

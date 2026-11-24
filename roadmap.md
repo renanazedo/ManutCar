@@ -2,12 +2,12 @@
 
 **Código do Documento:** MC-DOC-RDM-001  
 **Status:** Consolidado para Aprovação  
-**Versão:** 2.1  
+**Versão:** 2.2 (Atualizado com Infraestrutura Inicial e Adiamentos)  
 **Referências:**  
-* `MC-DOC-VIS-001` (`VISÃO_DO_PRODUTO.md`)  
-* `MC-DOC-ESP-001` (`ESPECIFICACAO_FUNCIONAL.md` v2.0)  
+* `MC-DOC-VIS-001` (`VISÃO_DO_PRODUTO.md` v1.1)  
+* `MC-DOC-ESP-001` (`ESPECIFICACAO_FUNCIONAL.md` v2.1)  
 * `MC-DOC-RN-001` (`REGRAS_DE_NEGOCIO.md` v2.1)  
-* `MC-DOC-DEC-001` (`PENDENCIAS_E_DECISOES.md` v3.0)  
+* `MC-DOC-DEC-001` (`PENDENCIAS_E_DECISOES.md` v3.1)  
 
 ---
 
@@ -92,6 +92,25 @@ A execução tática é dividida em **3 Incrementos de Entrega** alinhados às F
 
 A implementação do **Incremento 1** deve obedecer estritamente à ordem de dependência de dados abaixo. **Total de Entidades Conceituais Mapeadas: 34.**
 
+### 5.0. Pré-Sprint 0: Provisionamento da Infraestrutura Inicial (Camada B - Custo Zero) — `DEC-020`, `DEC-021`
+*Executar antes da Sprint 1. Não implementar código de negócio.*
+
+| Atividade | Detalhamento / Ferramentas | Critério de Pronto |
+| :--- | :--- | :--- |
+| **0.1 Repositório & Monorepo** | `git init`, Turborepo/Nx structure (`apps/api`, `apps/web`, `packages/db`, `packages/schemas`, `packages/ui`). | Repo no GitHub; `pnpm install` / `pip install` funcionando localmente. |
+| **0.2 Frontend (Vercel Hobby)** | Importar repo no Vercel. Framework Preset: Next.js. Root Directory: `apps/web`. Env Vars: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_URL`. | Deploy Preview funcionando; Clerk SDK carrega; PWA `manifest.json` / Service Worker registrado. |
+| **0.3 Backend (Render Free)** | New Web Service (Docker). Repo `apps/api`. Env Vars: `DATABASE_URL` (Neon), `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`, `R2_*`, `RESEND_API_KEY`, `FCM_*`, `SETTINGS_TZ=America/Sao_Paulo`. Healthcheck `/health`. | Deploy bem-sucedido; Logs mostram startup FastAPI; Swagger UI (`/docs`) acessível. |
+| **0.4 Banco de Dados (Neon Free)** | Criar Projeto Neon. Branch `main`. Habilitar extensões: `uuid-ossp`, `pg_trgm`. Connection Pooling (PgBouncer) ativado. `DATABASE_URL` (Pooled) no Render/Vercel. | `psql` conecta; `SELECT version();` retorna PG 16+. `alembic upgrade head` roda sem erro (vazio inicial). |
+| **0.5 Auth (Clerk Hobby)** | Criar Aplicação Clerk. Habilitar **Organizations**. Configurar Webhooks: `user.created`, `organization.created`, `organizationMembership.created` → `https://<api-domain>/api/v1/webhooks/clerk`. | Webhook recebido no Render (logs 200); Usuário criado no Clerk aparece no `User` local via sync. |
+| **0.6 Storage (Cloudflare R2)** | Criar Bucket `manutcar-dev`. API Token (Object Read/Write). CORS Policy: `AllowedOrigins: ["https://*.vercel.app", "https://*.onrender.com"]`, `AllowedMethods: ["GET", "PUT", "POST", "DELETE"]`. | Upload via Presigned URL (teste `curl`) funciona; Arquivo visível no Dashboard R2. |
+| **0.7 E-mail (Resend Free)** | Verificar domínio (ou usar `onrender.com`/`vercel.app` para teste). Criar API Key. Testar envio via `resend.emails.send`. | E-mail de teste recebido na caixa de entrada. |
+| **0.8 Push (FCM Spark)** | Criar Projeto Firebase. Project Settings → Cloud Messaging → Web Push Certificates (VAPID Key). Configurar `NEXT_PUBLIC_FCM_VAPID_KEY` no Vercel. | Service Worker recebe push de teste (console FCM). |
+| **0.9 CI/CD (GitHub Actions)** | Workflows: `ci.yml` (Lint `ruff`/`eslint`, Typecheck `mypy`/`tsc`, Test `pytest`/`vitest`, Build Docker), `cd-preview.yml` (Deploy Vercel Preview + Render Preview), `cd-prod.yml` (Tag `v*` → Deploy Production). | PR aberta roda CI; Merge em `main` deploya Preview; Tag `v0.1.0` deploya Prod (Vercel/Render). |
+
+---
+
+### 5.1. Sprint 1 a 5: Desenvolvimento Funcional (Incremento 1)
+
 | Sprint | Foco Técnico | Entregas Verificáveis (Critérios de Aceitação de Sprint) |
 | :--- | :--- | :--- |
 | **Sprint 1** | **Fundação, Banco, Auth & Auditoria** | 1. Modelagem física completa (34 entidades) via Migration (evitar migrations destrutivas futuras).<br>2. `AuditLog` imutável (Trigger/Event Sourcing) capturando `old_values`/`new_values` JSONB.<br>3. Auth (JWT/OAuth2), Criação `Organization` (inclui `OrganizationSettings` defaults), `OrganizationMember` com RBAC base.<br>4. `User` pessoal (Autônomo) cria `Organization` própria automaticamente no onboarding (`DEC-009`). |
@@ -106,12 +125,12 @@ A implementação do **Incremento 1** deve obedecer estritamente à ordem de dep
 
 | Código | Descrição | Origem | Incremento | Sprint | Casos de Teste (CT) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `RF-FLT-01` a `18` | Gestão Frota/Propriedade | Spec v2.0 | 1, 2 | 1, 2, 4 | `CT-RN-01`, `07`, `08` |
-| `RF-MNT-01` a `08` | Manutenção/Garantia | Spec v2.0 | 1, 2 | 4 | `CT-RN-02`, `06`, `07` |
-| `RF-ABS-01` a `06` | Abastecimento/Consumo | Spec v2.0 | 1 | 3 | `CT-RN-05`, `10` |
-| `RF-FIN-01` a `07` | Financeiro/Receitas/Rateio | Spec v2.0 | 1, 2 | 5 | `CT-RN-02`, `03`, `04`, `09`, `10`, `11` |
-| `RF-DOC-01` a `08` | Docs/Multas/CNH | Spec v2.0 | 1, 2 | 4 | `CT-RN-01`, `13` |
-| `RF-CHK-01` a `07` | Checklist/Segurança | Spec v2.0 | 1, 2 | 3 | `CT-RN-06` |
+| `RF-FLT-01` a `18` | Gestão Frota/Propriedade | Spec v2.1 | 1, 2 | 1, 2, 4 | `CT-RN-01`, `07`, `08` |
+| `RF-MNT-01` a `08` | Manutenção/Garantia | Spec v2.1 | 1, 2 | 4 | `CT-RN-02`, `06`, `07` |
+| `RF-ABS-01` a `06` | Abastecimento/Consumo | Spec v2.1 | 1 | 3 | `CT-RN-05`, `10` |
+| `RF-FIN-01` a `07` | Financeiro/Receitas/Rateio | Spec v2.1 | 1, 2 | 5 | `CT-RN-02`, `03`, `04`, `09`, `10`, `11` |
+| `RF-DOC-01` a `08` | Docs/Multas/CNH | Spec v2.1 | 1, 2 | 4 | `CT-RN-01`, `13` |
+| `RF-CHK-01` a `07` | Checklist/Segurança | Spec v2.1 | 1, 2 | 3 | `CT-RN-06` |
 | `RN-FLT-01` a `08` | Governança/Acesso/Auditoria | Rules v2.1 | 1, 2 | 1, 2 | `CT-RN-01`, `07`, `08` |
 | `RN-FIN-01` a `10` | Contabilidade/Rateio/Receita | Rules v2.1 | 1, 2 | 5 | `CT-RN-02`, `03`, `04`, `09`, `10`, `11` |
 | `RN-ABS-01` a `08` | Odômetro/Consumo/TCO | Rules v2.1 | 1 | 2, 3 | `CT-RN-05`, `10` |
@@ -122,4 +141,19 @@ A implementação do **Incremento 1** deve obedecer estritamente à ordem de dep
 
 ---
 
-*Fim do Documento MC-DOC-RDM-001 v2.1*
+## 7. Resumo de Adiamentos Explícitos (Conforme `DEC-021`)
+
+Os seguintes itens da Arquitetura Definitiva **NÃO** fazem parte do Incremento 1 (MVP Core) e estão formalmente adiados:
+
+| Item Adiado | Incremento Alvo | Dependência / Gatilho |
+| :--- | :--- | :--- |
+| **Redis / Upstash / BullMQ / Workers Assíncronos** | Inc. 2 | Necessidade de `SettlementStatement` assíncrono, jobs pesados de rateio, notificações em massa. |
+| **WhatsApp / Evolution API (Self-hosted)** | Inc. 3 | Necessidade de canal de notificação crítico/transacional; homologação Meta. |
+| **App Nativo Mobile (React Native / Expo)** | Inc. 3 | PWA (Next.js + Workbox + Dexie.js) atende Offline-First Inc. 1/2. |
+| **Integrações Diretas API (Uber/99, SENATRAN/Caronte.io)** | Inc. 2 / 3 | Parser CSV/PDF (`PlatformImportBatch`) atende Inc. 1. Requer `DataConsent` robusto e homologação. |
+| **Motor Preditivo TCO / IA (Scikit-learn, XGBoost, TimescaleDB)** | Inc. 3 | Requer volume histórico de dados (Odômetro, OS, Combustível) para treino. |
+| **Extensão TimescaleDB (PostgreSQL)** | Inc. 3 | Instalar no Neon/CloudSQL apenas quando modelo preditivo for iniciado. |
+
+---
+
+*Fim do Documento MC-DOC-RDM-001 v2.2*

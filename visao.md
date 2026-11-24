@@ -1,8 +1,8 @@
 # VISÃO DO PRODUTO — ManutCar
 
 **Código do Documento:** MC-DOC-VIS-001  
-**Status:** Em Revisão  
-**Versão:** 1.0  
+**Status:** Aprovado  
+**Versão:** 1.1 (Inclui Estratégia de Infraestrutura)  
 
 ---
 
@@ -66,3 +66,55 @@ O sistema será composto por seis módulos integrados:
 * Um motorista autônomo consegue operar o sistema de forma simples, sem burocracia corporativa excessiva.
 * Um gestor de frota consegue administrar veículos próprios e de terceiros no mesmo painel, com prestação de contas clara para cada proprietário.
 * A troca de motorista ou de propriedade de um veículo preserva 100% do histórico técnico sem vazar dados financeiros privados anteriores.
+
+---
+
+## 8. Estratégia de Infraestrutura: Duas Camadas Distintas
+
+Para viabilizar o desenvolvimento ágil e sem custo inicial, mantendo a integridade da arquitetura de produto, o ManutCar adota uma separação explícita entre **Arquitetura Definitiva (Camada A)** e **Infraestrutura Inicial de Desenvolvimento/Validação (Camada B)**.
+
+### 8.1. Camada A — Arquitetura Definitiva do Produto (Referência)
+Esta é a arquitetura alvo para operação comercial (Produção), definida em `MC-DOC-DEC-001` (`DEC-011`, `DEC-012`, `DEC-019`):
+* **Backend:** Python 3.12 + FastAPI (Async) + SQLAlchemy 2.0 + Alembic.
+* **Frontend Web:** Next.js 14 (App Router) + TypeScript + Tailwind + Shadcn/UI.
+* **Mobile:** PWA (Inc. 1/2) → React Native/Expo (Inc. 3).
+* **Banco:** PostgreSQL 16 (RLS, JSONB, TimescaleDB para Inc. 3).
+* **Auth:** Clerk (Managed, Organizações nativas, MFA).
+* **Storage:** Cloudflare R2 (S3 Compatível, Zero Egress).
+* **Hospedagem Prod:** Vercel (Frontend/Edge) + Railway/Render (Backend/Workers) + Upstash Redis (Cache/Filas).
+* **Notificações:** Resend (E-mail) + FCM (Push) + Evolution API (WhatsApp - Self-hosted).
+* **Observabilidade/IA:** TimescaleDB + Scikit-learn/XGBoost (Inc. 3).
+* **Planos SaaS:** FREE / PRO (R$ 49/mês) / ENTERPRISE.
+
+### 8.2. Camada B — Infraestrutura Inicial de Desenvolvimento e Validação (Custo Zero — `DEC-020`)
+Configuração temporária para implementação do **Incremento 1 (MVP Core)**. **Não substitui a Camada A.** Limitações conhecidas impedem uso em produção comercial.
+
+| Componente | Serviço/Tecnologia Inicial | Limitações Críticas (Não Produção) |
+| :--- | :--- | :--- |
+| **Frontend** | **Vercel Hobby** | Sem SLA; limites de execução serverless (10s/60s); banda/armazenamento limitados. |
+| **Backend** | **Render Free (Web Service)** | **Suspensão por inatividade (spin down)** → Cold start > 30s; CPU/RAM limitados; sem VPC/IP fixo; logs efêmeros. |
+| **Banco de Dados** | **Neon Free (PostgreSQL Serverless)** | Limite ~0.5-1 GB armazenamento; compute hours limitados; histórico de branches 7 dias; suspensão por inatividade. |
+| **Autenticação** | **Clerk Hobby** | Limite MAUs (Monthly Active Users) e Organizações ativas; sem DPA assinado padrão; suporte comunitário. |
+| **Arquivos** | **Cloudflare R2 (Free Tier)** | 10 GB/mês armazenamento; 1M ops Classe A/B/mês; sem SLA de durabilidade/performance. |
+| **E-mail** | **Resend Free** | 3.000 e-mails/mês; 100/dia; sem IP dedicado; suporte via ticket. |
+| **Push Notifications** | **Firebase Cloud Messaging (Spark)** | Limites de mensagens/dispositivos; dependência Google; sem SLA. |
+| **CI/CD** | **GitHub Actions (Free Minutes)** | Minutos limitados por mês (conta/org); runners shared; sem garantia de disponibilidade. |
+| **Cache / Filas** | **ADIADO (`DEC-021`)** | Redis/BullMQ não provisionados. Jobs via `pg_cron` (Neon) ou síncronos. |
+| **WhatsApp** | **ADIADO (`DEC-021`)** | Fora do escopo Inc. 1. |
+| **App Nativo** | **ADIADO (`DEC-021`)** | PWA atende Inc. 1. |
+| **Integrações Externas / IA** | **ADIADO (`DEC-021`)** | Parser CSV/PDF manual atende Inc. 1. |
+
+### 8.3. Gatilhos para Migração Camada B → Camada A (`DEC-022`)
+A migração para a infraestrutura paga (Produção) **deve** ser iniciada quando **qualquer** condição for atingida:
+1.  **Disponibilidade Real:** Usuários reais em operação; suspensão por inatividade (Render/Neon) inaceitável.
+2.  **Franquias Excedidas:** DB > 500MB-1GB; R2 > 10GB; Resend > 3k/mês; Clerk MAU limit.
+3.  **Necessidade Assíncrona:** Filas (BullMQ/Redis), Workers dedicados, `pg_cron` insuficiente.
+4.  **Segurança/Compliance:** VPC, IP dedicado, DPA formal, Backup PITR gerenciado, Logs de auditoria de infra.
+5.  **Suporte/Contrato:** Suporte prioritário, SLA, contratos de processamento de dados (LGPD).
+
+### 8.4. Validação Comercial Obrigatória (`DEC-023`)
+Antes de contratar planos pagos, confirmar com **cada fornecedor**: Preços (BRL/Impostos), Franquias exatas, DPA/LGPD, Políticas de Overage, Região (São Paulo), Suporte.
+
+---
+
+*Fim do Documento MC-DOC-VIS-001 v1.1*
