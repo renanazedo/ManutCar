@@ -180,17 +180,13 @@ def create_settings(organization_id: uuid.UUID) -> OrganizationSettings:
 # =============================================================================
 
 async def test_imports_and_router():
-    """Valida imports e registro de rota sem duplicação de prefixo."""
-    print("\n--- Teste 1: Imports e validação de rota ---")
-    
-    # Verifica se a rota está registrada corretamente
-    routes = [route.path for route in api_router.routes]
+    print("--- Teste 1: Imports e validacao de rota ---")
+    from apps.api.app.main import app as _fastapi_app
+    routes = [getattr(route, "path", "") for route in _fastapi_app.routes]
     webhook_routes = [r for r in routes if "webhooks" in r]
-    
-    assert "/webhooks/clerk" in webhook_routes, f"Rota /webhooks/clerk não encontrada. Rotas: {webhook_routes}"
-    assert "/webhooks/webhooks/clerk" not in webhook_routes, "Duplicação de prefixo detectada: /webhooks/webhooks/clerk"
-    
-    print("✓ Rota /webhooks/clerk registrada corretamente sem duplicação de prefixo")
+    assert "/api/v1/webhooks/clerk" in webhook_routes, f"Rota /api/v1/webhooks/clerk nao encontrada. Rotas: {routes}"
+    assert "/api/v1/webhooks/webhooks/clerk" not in webhook_routes, "Duplicacao de prefixo detectada"
+    print("OK: Rota /api/v1/webhooks/clerk registrada corretamente sem duplicacao de prefixo")
     return True
 
 
@@ -408,7 +404,15 @@ async def test_verify_clerk_signature():
     import json
     
     # Gera assinatura válida usando o secret de teste
-    secret = "whsec_test_secret_123456789012345678901234"
+    from apps.api.app.core.config import settings as _api_settings
+    from apps.api.app.core.config import settings as _api_settings
+    from apps.api.app.core.config import settings as _api_settings
+    from apps.api.app.core.config import settings as _api_settings
+    secret = "whsec_dGVzdF9zZWNyZXRfMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0"
+    _api_settings.CLERK_WEBHOOK_SECRET = secret
+    _api_settings.CLERK_WEBHOOK_SECRET = secret
+    _api_settings.CLERK_WEBHOOK_SECRET = secret
+    _api_settings.CLERK_WEBHOOK_SECRET = secret
     wh = Webhook(secret)
     
     payload = {
@@ -419,7 +423,10 @@ async def test_verify_clerk_signature():
     payload_bytes = json.dumps(payload).encode()
     
     # Gera headers válidos
-    headers = wh.sign(payload_bytes)
+    from datetime import datetime as _dt, timezone as _tz
+    _ts = _dt.now(_tz.utc)
+    _sig = wh.sign('msg_test_svix_001', _ts, payload_bytes.decode('utf-8'))
+    headers = {'svix-id': 'msg_test_svix_001', 'svix-timestamp': str(int(_ts.timestamp())), 'svix-signature': _sig}
     svix_id = headers["svix-id"]
     svix_timestamp = headers["svix-timestamp"]
     svix_signature = headers["svix-signature"]
