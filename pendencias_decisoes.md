@@ -4,10 +4,10 @@
 **Status:** **Todas Pendências Resolvidas — Pronto para Sprint 1**  
 **Versão:** 3.0 (Final)  
 **Referências:**  
-* `MC-DOC-VIS-001` (`VISÃO_DO_PRODUTO.md`)  
+* `MC-DOC-VIS-001` (`VISÃO_DO_PRODUTO.md` v1.0)  
 * `MC-DOC-ESP-001` (`ESPECIFICACAO_FUNCIONAL.md` v2.0)  
-* `MC-DOC-RN-001` (`REGRAS_DE_NEGOCIO.md` v2.0)  
-* `MC-DOC-RDM-001` (`ROADMAP.md` v2.0)  
+* `MC-DOC-RN-001` (`REGRAS_DE_NEGOCIO.md` v2.1)  
+* `MC-DOC-RDM-001` (`ROADMAP.md` v2.1)  
 
 ---
 
@@ -41,10 +41,10 @@ As decisões abaixo estão **fechadas, congeladas e prontas para implementação
 
 ## 2. Checklist de Encerramento da Documentação Oficial — **100% CONCLUÍDO**
 
-* [x] `VISÃO_DO_PRODUTO.md` (`MC-DOC-VIS-001`) — Aprovado
+* [x] `VISÃO_DO_PRODUTO.md` (`MC-DOC-VIS-001` v1.0) — Aprovado
 * [x] `ESPECIFICACAO_FUNCIONAL.md` (`MC-DOC-ESP-001` v2.0) — Aprovado
-* [x] `REGRAS_DE_NEGOCIO.md` (`MC-DOC-RN-001` v2.0) — Aprovado
-* [x] `ROADMAP.md` (`MC-DOC-RDM-001` v2.0) — Aprovado
+* [x] `REGRAS_DE_NEGOCIO.md` (`MC-DOC-RN-001` v2.1) — Aprovado
+* [x] `ROADMAP.md` (`MC-DOC-RDM-001` v2.1) — Aprovado
 * [x] `PENDENCIAS_E_DECISOES.md` (`MC-DOC-DEC-001` v3.0) — **Todas Pendências Resolvidas → ADRs**
 
 ---
