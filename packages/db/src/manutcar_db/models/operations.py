@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -14,6 +14,10 @@ from manutcar_db.enums import (
     ExpenseNature,
     FuelType,
 )
+
+if TYPE_CHECKING:
+    from manutcar_db.models.fleet import Vehicle
+    from manutcar_db.models.identity import Organization, User
 
 
 class OdometerReading(UUIDMixin, TimestampMixin, Base):
