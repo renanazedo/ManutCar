@@ -11,18 +11,19 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.29",
     "asyncpg>=0.29.0",
     "alembic>=1.13.1",
-    "pydantic>=2.7.0",
+    "pydantic[email]>=2.7.0",
+    "email-validator>=2.4.0",
     "pydantic-settings>=2.3.0",
     "pydantic-extra-types>=2.6.0",
     "python-multipart>=0.0.9",
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
-    "svix>=1.16.0",
+    "svix>=2.11.1",
     "boto3>=1.34.0",
     "resend>=0.10.0",
     "firebase-admin>=6.4.0",
     "python-dotenv>=1.0.1",
-    "structlog>=24.1.0",
+    "structlog>=26.1.0",
 ]
 
 [project.optional-dependencies]

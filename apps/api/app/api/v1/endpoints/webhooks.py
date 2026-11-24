@@ -19,31 +19,46 @@ async def verify_clerk_signature(
     svix_signature: str = Header(..., alias="svix-signature"),
 ) -> dict[str, Any]:
     """
-    Dependency que verifica a assinatura Svix e retorna o payload JSON válido.
-    Instancia Webhook aqui (não no import) para não quebrar quando CLERK_WEBHOOK_SECRET estiver vazio.
-    Levanta 400 se assinatura inválida ou payload malformado.
+    Dependency que verifica a assinatura Svix e retorna o payload JSON valido.
+    Instancia Webhook aqui (nao no import) para nao quebrar quando CLERK_WEBHOOK_SECRET estiver vazio.
+    Levanta 400 se assinatura invalida ou payload malformado.
     """
     payload_bytes = await request.body()
+
+    # 1. Verifica a assinatura. O retorno do verify() e descartado:
+    #    o contrato do svix varia entre versoes e pode devolver None.
     try:
-        # Instancia Webhook dentro da função
         wh = Webhook(settings.CLERK_WEBHOOK_SECRET)
-        headers = {
-            "svix-id": svix_id,
-            "svix-timestamp": svix_timestamp,
-            "svix-signature": svix_signature,
-        }
-        verified_payload = wh.verify(payload_bytes, headers)
-        return verified_payload
+        wh.verify(
+            payload_bytes,
+            {
+                "svix-id": svix_id,
+                "svix-timestamp": svix_timestamp,
+                "svix-signature": svix_signature,
+            },
+        )
     except WebhookVerificationError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Assinatura Svix inválida: {e}",
+            detail=f"Assinatura Svix invalida: {e}",
         )
-    except json.JSONDecodeError:
+
+    # 2. Parse explicito do corpo ja verificado.
+    try:
+        payload = json.loads(payload_bytes)
+    except json.JSONDecodeError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Payload não é JSON válido",
+            detail=f"Payload nao e JSON valido: {e}",
         )
+
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload JSON deve ser um objeto",
+        )
+
+    return payload
 
 
 @router.post("/clerk", status_code=status.HTTP_200_OK)
@@ -72,7 +87,5 @@ async def clerk_webhook(
         return result
     except Exception as e:
         await db.rollback()
-        # Log estruturado seria ideal aqui (structlog)
         print(f"ERRO Webhook Clerk [{event_type}]: {e}")
-        # Retornamos 200 mesmo em erro de negócio para não travar retry do Clerk
         return {"status": "error", "message": str(e)}
