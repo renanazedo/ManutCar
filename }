@@ -1,6 +1,0 @@
-
-## Temas
-Suporta **Light/Dark mode** via CSS variables (definidas em `apps/web/src/app/globals.css`).
-As cores usam `hsl(var(--color))` para compatibilidade total com Tailwind.
-
-## Utilitários

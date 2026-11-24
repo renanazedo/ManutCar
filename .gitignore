@@ -71,3 +71,10 @@ alembic/versions/*.py
 *.key
 *.crt
 .secrets
+.aider*
+
+bkp/
+*.zip
+audit_*.txt
+
+manutcar-site/
