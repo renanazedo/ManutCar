@@ -15,16 +15,12 @@ from manutcar_db.models.fleet import Vehicle, VehicleManagementAgreement, Vehicl
 from manutcar_db.enums import OrgRole, AgreementStatus, VehicleOperationalStatus
 
 
-# Clerk JWKS URL para validação de tokens RS256
-CLERK_JWKS_URL = "https://clerk.your-domain.com/.well-known/jwks.json"  # Ajustar para o domínio real
-
-
 def decode_clerk_jwt(token: str) -> dict:
     """
     Decodifica e valida um JWT do Clerk usando RS256 via JWKS.
     Valida claims básicos: exp, iat, sub.
     """
-    jwk_client = PyJWKClient(CLERK_JWKS_URL)
+    jwk_client = PyJWKClient(settings.CLERK_JWKS_URL)
     signing_key = jwk_client.get_signing_key_from_jwt(token)
     
     payload = jwt.decode(
@@ -101,14 +97,15 @@ async def get_current_auth_context(
     
     if clerk_org_id:
         # Tenta converter clerk_org_id para UUID se for UUID válido
-        # Senão, assume que é metadata/workspace e busca via Organization.clerk_org_id ou similar
+        # Organization NÃO possui campo clerk_org_id (conforme identity.py)
+        # Se for UUID válido, filtra por Organization.id == org_uuid
+        # Se não for UUID válido, filtra por Organization.is_personal_workspace.is_(False)
         try:
             org_uuid = uuid.UUID(clerk_org_id)
             query = query.where(Organization.id == org_uuid)
         except ValueError:
-            # Se não for UUID, pode ser um identificador do Clerk - ajustar conforme modelo
-            # Assumindo que Organization tem campo clerk_org_id ou similar
-            query = query.where(Organization.clerk_org_id == clerk_org_id)
+            # Não é UUID válido - busca primeira organização não-pessoal vinculada ao usuário
+            query = query.where(Organization.is_personal_workspace.is_(False))
     else:
         # Prioriza personal workspace
         query = query.where(Organization.is_personal_workspace.is_(True))

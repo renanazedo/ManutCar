@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     CLERK_SECRET_KEY: str = ""
     CLERK_WEBHOOK_SECRET: str = ""
+    CLERK_JWKS_URL: str = ""
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
     ENVIRONMENT: str = "development"
 
