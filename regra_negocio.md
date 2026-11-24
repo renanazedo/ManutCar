@@ -2,8 +2,8 @@
 
 **Código do Documento:** MC-DOC-RN-001  
 **Status:** Consolidado para Revisão Final  
-**Versão:** 2.0  
-**Referências:** MC-DOC-VIS-001 (`VISÃO_DO_PRODUTO.md`), MC-DOC-ESP-001 (`ESPECIFICACAO_FUNCIONAL.md`)  
+**Versão:** 2.1  
+**Referências:** MC-DOC-VIS-001 (`VISÃO_DO_PRODUTO.md`), MC-DOC-ESP-001 (`ESPECIFICACAO_FUNCIONAL.md`), MC-DOC-DEC-001 (`PENDENCIAS_E_DECISOES.md` v3.0)  
 
 ---
 
@@ -86,7 +86,7 @@
   3. `SHARED`: Rateada proporcionalmente com base na quilometragem rodada no período (`km_profissional / km_total`).
   * *Rastreabilidade: RF-ABS-05, RF-FLT-12*
 
-* **`RN-FIN-05` (Fórmula de Rateio Proporcional):**
+* **`RN-FIN-05` (Fórmula de Rateio Proporcional por KM):**
   $$\text{Custo Profissional} = \text{Valor Total} \times \left(\frac{\text{KM Profissional no Período}}{\text{KM Total no Período}}\right)$$
   $$\text{Custo Particular} = \text{Valor Total} - \text{Custo Profissional}$$
   *O "Período" para cálculo do rateio deve ser o mês calendário ou o período do `SettlementStatement`.*
@@ -94,6 +94,14 @@
 
 * **`RN-FIN-06` (Responsabilidade Financeira por Categoria):** A entidade `VehicleFinancialResponsibility` define regras padrão por `vehicle_id` e `expense_category` (ex.: `INSURANCE` -> Proprietário, `FUEL` -> Motorista, `MAINTENANCE_CORRECTIVE` -> Contrato). Lançamentos manuais podem sobrescrever a regra padrão com justificativa.
   * *Rastreabilidade: RF-FLT-12*
+
+* **`RN-FIN-10` (Rateio Híbrido: Variáveis por KM, Fixas por Dias — DEC-015):**
+  * **Despesas Variáveis** (Combustível, Pedágio, Lavagem, Manutenção Corretiva/Preventiva não contratual): Rateio **KM Profissional / KM Total** (conforme `RN-FIN-05`). Campo `rateio_base = 'KM'`.
+  * **Despesas Fixas/Periódicas** (IPVA, Licenciamento, Seguro, Proteção Veicular, Aluguel/Depreciação, Parcela Financiamento): Rateio **Dias Alocação Motorista / Dias Período**. Campo `rateio_base = 'DIAS'`.
+  * **Fórmula Rateio por Dias:**
+    $$\text{Custo Profissional} = \text{Valor Total} \times \left(\frac{\text{Dias Alocação Motorista no Período}}{\text{Dias Totais no Período}}\right)$$
+  * Implementação: Campo `rateio_base` ENUM (`KM`, `DIAS`) em `VehicleFinancialResponsibility` com default por `expense_category`.
+  * *Rastreabilidade: `DEC-015`, `PEND-003`, `SettlementStatement` Inc. 2*
 
 ### 3.3. Regra de Alocação de Receitas (Uber/99)
 * **`RN-FIN-07` (Vínculo por Turno):** Quando um motorista operar mais de um veículo no mesmo dia/semana, as receitas importadas ou lançadas devem ser vinculadas ao `vehicle_id` ativo em `VehicleAssignment` cujo intervalo `[start_datetime, end_datetime]` contenha o carimbo de data/hora da corrida ou turno. Caso não haja horário granular no extrato, o motorista deverá selecionar o veículo correspondente antes de confirmar o lote (`PlatformImportBatch`).
@@ -115,7 +123,7 @@
   Caso seja inferior, o sistema bloqueia o salvamento com erro `ODOMETER_REGRESSION`.
   * *Rastreabilidade: RF-ABS-02, RF-CHK-03, CA-ABS-01, CA-CHK-03*
 
-* **`RN-ABS-02` (Alerta de Salto Anômalo):** Se a diferença entre o novo odômetro e o anterior ultrapassar `1.500 km` em menos de 24 horas (parâmetro configurável por organização em `OrganizationSettings`), o sistema exibe alerta de confirmação (`WARNING_ODOMETER_JUMP`) para evitar erro de digitação (ex.: digitar um zero a mais), mas permite prosseguir mediante confirmação explícita.
+* **`RN-ABS-02` (Alerta de Salto Anômalo):** Se a diferença entre o novo odômetro e o anterior ultrapassar `1.500 km` em menos de 24 horas (parâmetro configurável por organização em `OrganizationSettings.odometer_jump_alert_km`), o sistema exibe alerta de confirmação (`WARNING_ODOMETER_JUMP`) para evitar erro de digitação (ex.: digitar um zero a mais), mas permite prosseguir mediante confirmação explícita.
   * *Rastreabilidade: RF-ABS-02*
 
 * **`RN-ABS-03` (Fonte Única da Verdade):** A tabela `OdometerReading` é o log unificado e imutável de todas as leituras. Módulos `MC-ABS`, `MC-CHK`, `MC-MNT` **não** armazenam odômetro localmente; apenas referenciam ou inserem em `OdometerReading` via trigger/service centralizado.
@@ -157,7 +165,7 @@
 
 * **`RN-MNT-03` (Semáforo de Status Preventivo):**
   * **VENCIDO (`OVERDUE`):** $\text{Odômetro Atual} \ge \text{KM Alvo}$ **OU** $\text{Data Atual} > \text{Data Alvo}$.
-  * **PRÓXIMO (`DUE_SOON`):** Faltam $\le 10\%$ do $\Delta KM$ (ex.: últimos 1.000 km de um plano de 10.000 km) **OU** $\le 15\text{ dias}$ para a Data Alvo.
+  * **PRÓXIMO (`DUE_SOON`):** Faltam $\le 10\%$ do $\Delta KM$ (parâmetro `OrganizationSettings.preventive_due_soon_km_pct`, padrão 10%) **OU** $\le 15\text{ dias}$ (parâmetro `OrganizationSettings.preventive_due_soon_days`, padrão 15) para a Data Alvo.
   * **EM DIA (`OK`):** Acima das margens de atenção.
   * *Rastreabilidade: RF-MNT-03, CA-MNT-01*
 
@@ -193,12 +201,12 @@
 * **`RN-DOC-04` (Registro de Infração Completo):** `TrafficTicket` exige: `infraction_auto_number`, `infraction_datetime`, `infraction_code` (ex.: 501-10), `location`, `speed_limit`/`measured_speed` (se aplicável), `points`, `full_amount`, `discounted_amount`, `indication_deadline`, `status` (`PENDING_INDICATION`, `INDICATED`, `CONFIRMED`, `APPEALED`, `PAID`, `CANCELLED`).
   * *Rastreabilidade: RF-DOC-04*
 
-* **`RN-DOC-05` (Identificação Automática de Infrator):** Ao registrar `TrafficTicket` com `infraction_datetime`, o sistema consulta `VehicleAssignment` buscando registro onde:
+* **`RN-DOC-05` (Identificação Automática de Infrator — DEC-018):** Ao registrar `TrafficTicket` com `infraction_datetime`, o sistema consulta `VehicleAssignment` buscando registro onde:
   $$\text{vehicle\_id} = \text{ticket.vehicle\_id} \quad \text{E} \quad \text{start\_datetime} \le \text{infraction\_datetime} \le \text{COALESCE(end\_datetime, NOW)}$$
-  * Se encontrar **1 motorista**, preenche `suggested_driver_id` e `identification_method = AUTO_ASSIGNMENT`.
-  * Se encontrar **0 motoristas**, preenche `responsible_entity = OPERATIONAL_HOLDER` (Org Gestora ou Proprietário) e `identification_method = FALLBACK_OWNER`.
-  * Se encontrar **>1 motorista** (sobreposição de turno), exige seleção manual (`identification_method = MANUAL`).
-  * *Rastreabilidade: RF-DOC-05, CA-DOC-01*
+  * Se encontrar **1 motorista**, preenche `suggested_driver_id`, `identification_method = 'AUTO_ASSIGNMENT'`.
+  * Se encontrar **0 motoristas**, preenche `responsible_entity = 'OPERATIONAL_HOLDER'` (Org Gestora ou Proprietário), `identification_method = 'FALLBACK_OWNER'`.
+  * Se encontrar **>1 motorista** (sobreposição de turno), `identification_method = 'MANUAL'`. UI (Modal) lista motoristas conflitantes com `start/end` do turno. Usuário (Gestor/Admin) seleciona um → `selected_driver_id`. Bloqueia salvamento sem seleção.
+  * *Rastreabilidade: RF-DOC-05, CA-DOC-01, `DEC-018`*
 
 * **`RN-DOC-06` (Fluxo de Indicação de Condutor):** O sistema controla `TrafficTicket.indication_status`:
   1. `PENDING_INDICATION`: Aguardando indicação (prazo `indication_deadline`).
@@ -238,7 +246,7 @@
 * **`RN-CHK-05` (Atualização de Odômetro):** Ao finalizar `ChecklistExecution` com `status = COMPLETED`, o `odometer_end` é gravado em `OdometerReading` (source=`CHECKLIST`) se for maior que a última leitura válida. Validação `RN-ABS-01` aplica-se.
   * *Rastreabilidade: RF-CHK-04, RN-ABS-01*
 
-* **`RN-CHK-06` (Vistoria de Troca de Posse - Handover/Return):** Para `VehicleAssignment` com duração prevista > 24h (ou política da org), a criação do `Assignment` (início) exige `ChecklistExecution` de `type = HANDOVER` concluído. O encerramento do `Assignment` (devolução) exige `ChecklistExecution` de `type = RETURN` concluído. O sistema compara respostas de `HANDOVER` vs `RETURN` para detectar novas avarias (`NEW_DAMAGE_DETECTED`).
+* **`RN-CHK-06` (Vistoria de Troca de Posse - Handover/Return):** Para `VehicleAssignment` com duração prevista > 24h (parâmetro `OrganizationSettings.handover_mandatory_hours`, padrão 24) ou política da org, a criação do `Assignment` (início) exige `ChecklistExecution` de `type = HANDOVER` concluído. O encerramento do `Assignment` (devolução) exige `ChecklistExecution` de `type = RETURN` concluído. O sistema compara respostas de `HANDOVER` vs `RETURN` para detectar novas avarias (`NEW_DAMAGE_DETECTED`).
   * *Rastreabilidade: RF-CHK-07, CA-CHK-03 (parcial)*
 
 * **`RN-CHK-07` (Histórico Comparativo):** O relatório de `VehicleAssignment` deve exibir lado a lado os itens do `HANDOVER` e `RETURN`, destacando diferenças em itens `OK_NOK` e fotos de avarias.
@@ -252,11 +260,20 @@
 
 * **`RN-AUD-02` (Exclusão Lógica / Soft Delete):** Entidades principais (`Vehicle`, `User`, `Organization`, `VehicleOwner`, `WorkOrder`, `FinancialLedgerEntry`, `TrafficTicket`, `VehicleManagementAgreement`, `DataConsent`) **nunca** sofrem exclusão física (`DELETE` no banco) quando possuírem vínculos históricos. Utilizam `deleted_at` (timestamp) + `deletion_reason` (texto obrigatório). Queries padrão filtram `WHERE deleted_at IS NULL`.
 
-* **`RN-AUD-03` (LGPD - Direito ao Esquecimento / Anonimização):** Para `User` (motorista/proprietário) que solicitar exclusão de dados pessoais (LGPD Art. 18), o sistema deve:
-  1. Anonimizar campos PII em `User` (nome -> "Usuário Removido", CPF/CNH -> hash, email/phone -> null).
-  2. Manter `User.id` e vínculos operacionais (`VehicleAssignment`, `WorkOrder` executor) para integridade referencial e histórica.
-  3. Revogar todos `DataConsent` ativos.
-  4. Registrar ação em `AuditLog` com `action = ANONYMIZE_LGPD`.
+* **`RN-AUD-03` (LGPD - Direito ao Esquecimento / Anonimização — DEC-017):** Para `User` (motorista/proprietário PF) que solicitar exclusão de dados pessoais (LGPD Art. 18), o sistema deve:
+  1. **Tabela `User` (PF):** Anonimizar campos PII:
+     * `full_name` → `"Usuário Removido"`
+     * `cpf`, `cnh_number` → `SHA256(val) || '_ANON'`
+     * `email` → `anon_<id>@manutcar.local`
+     * `phone`, `address`, `bank_account`, `avatar_url` → `NULL`
+     * **Preservar:** `id`, `auth_provider_id`, `created_at`, `updated_at`, `status`, `role_global`
+  2. **Tabela `VehicleOwner` (PF):** Mesma regra para `name`, `cpf`, `cnh`, `contact_info`. **Preservar:** `id`, `owner_type`, `created_at`.
+  3. Manter `User.id` e vínculos operacionais (`VehicleAssignment`, `WorkOrder.executor_id`) para integridade referencial e histórica.
+  4. Revogar todos `DataConsent` ativos.
+  5. Registrar ação em `AuditLog` com `action = 'ANONYMIZE_LGPD'`.
+  * *Rastreabilidade: `DEC-017`, `PEND-019`*
+
+* **`RN-AUD-04` (Fuso Horário em Auditoria):** Todos timestamps em `AuditLog` armazenados em **UTC**. Apresentação convertida para `OrganizationSettings.timezone` da organização do ator.
 
 ---
 
@@ -274,6 +291,9 @@ Para evitar *hardcoding* de regras de negócio, os seguintes parâmetros devem s
 | `handover_mandatory_hours` | Duração mínima do Assignment para exigir Handover/Return | 24 |
 | `fuel_full_tank_tolerance_pct` | Tolerância % para considerar "tanque cheio" em bombas (ex.: 95%) | 95 |
 | `settlement_periodicity` | Periodicidade do acerto financeiro (`MONTHLY`, `WEEKLY`, `BIWEEKLY`) | MONTHLY |
+| `timezone` | Fuso horário da organização (IANA TZ) | `America/Sao_Paulo` |
+| `document_numbering_strategy` | Estratégia de numeração fiscal (`SEQUENTIAL_ORG`, `SEQUENTIAL_GLOBAL`, `PREFIX_ORG_YYYY`) | `PREFIX_ORG_YYYY` |
+| `subscription_plan_id` | Plano de assinatura ativo (`FREE`, `PRO`, `ENTERPRISE`) | `FREE` |
 
 ---
 
@@ -291,7 +311,10 @@ Estes critérios servem como base para Testes Unitários e de Integração (BDD)
 * **CT-RN-08:** Tentar acessar `Vehicle` de terceiro sem `VehicleManagementAgreement` ativo -> **Erro 403 `UNAUTHORIZED_VEHICLE_ACCESS`**.
 * **CT-RN-09:** Revogar `DataConsent` motorista -> Consultas subsequentes a `RevenueEntry` (Uber/99) por Org/Proprietário retornam **vazio/403**.
 * **CT-RN-10:** Calcular rateio `SHARED` com KM Total = 0 -> **Erro 400 `DIVISION_BY_ZERO`** (exigir KM manual ou bloquear rateio).
+* **CT-RN-11:** Calcular rateio de despesa fixa (`rateio_base = DIAS`) com Dias Período = 0 -> **Erro 400 `DIVISION_BY_ZERO`**.
+* **CT-RN-12:** Solicitar anonimização LGPD -> `User` anonimizado conforme `RN-AUD-03`, `DataConsent` revogados, `AuditLog` registra `ANONYMIZE_LGPD`, FKs preservadas.
+* **CT-RN-13:** Cadastrar multa com turno sobreposto (`>1 motorista`) -> `identification_method = MANUAL`, UI Modal exige seleção, bloqueia salvamento sem `selected_driver_id`.
 
 ---
 
-*Fim do Documento MC-DOC-RN-001 v2.0*
+*Fim do Documento MC-DOC-RN-001 v2.1*
