@@ -97,7 +97,7 @@ foreach ($file in $files) {
 
 Write-Host "`n===== RESULTADO FINAL ====="
 if ($errors -gt 0) {
-    Write-Host "FALHA_NA_AUDITORIA: $errors pendência(s) encontrada(s)." -ForegroundColor Red
+    Write-Host "FALHA_NA_AUDITORIA: $errors pendencias" -ForegroundColor Red
     exit 1
 } else {
     Write-Host "BLOCO_1_VALIDADO_COM_SUCESSO" -ForegroundColor Green
