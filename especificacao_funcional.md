@@ -8,7 +8,7 @@
 ---
 
 ## 1. Visão Geral da Arquitetura Funcional
-O **ManutCar** opera sob uma arquitetura **multiorganização, multiusuário e multiproprietário**, composta por seis módulos interdependentes que compartilham um núcleo único de identidade, governança de acesso e prontuário veicular:
+O **ManutCar** opera sob uma arquitetura **multiorganização, multiusuário e multiproprietário**, composta por seis módulos interdependentes que compartilham um núcleo único de identidade, governança de acesso e prontuário veicular. A arquitetura prevê **criação automática de Organização Pessoal ("Minha Operação") no onboarding de Motoristas Autônomos (B2C)**, garantindo `organization_id` obrigatório (NOT NULL) em todas as tabelas transacionais desde o primeiro acesso.
 
 1. **MC-FLT:** Gestão de Frota e Relacionamento com Proprietários
 2. **MC-MNT:** Manutenção Preventiva e Corretiva
@@ -39,8 +39,8 @@ Administrar veículos, proprietários, motoristas, organizações e responsabili
 * **Manutenção:** Registra ordens de serviço, inspeções e planos preventivos.
 
 ### 2.4. Requisitos Funcionais (MC-FLT)
-* `RF-FLT-01`: Criar organizações de gestão.
-* `RF-FLT-02`: Permitir usuários em múltiplas organizações com papéis distintos.
+* `RF-FLT-01`: Criar organizações de gestão (incluindo criação automática de **Organização Pessoal** para motorista autônomo no cadastro inicial).
+* `RF-FLT-02`: Permitir usuários em múltiplas organizações com papéis distintos (o motorista autônomo é `Admin` de sua Organização Pessoal e pode ser `Motorista` em organizações de terceiros).
 * `RF-FLT-03`: Cadastrar proprietários pessoa física ou jurídica.
 * `RF-FLT-04`: Vincular veículos a proprietários com data efetiva de titularidade.
 * `RF-FLT-05`: Permitir administração de veículos próprios e de terceiros pela mesma organização.
@@ -104,6 +104,7 @@ Controlar planos preventivos por quilometragem e/ou tempo, gerenciar ordens de s
 * `WorkOrder` (ordem de serviço estruturada)
 * `WorkOrderItem` (peças e serviços discriminados com valores e prazos de garantia)
 * `ServiceProvider` (oficinas, mecânicos e fornecedores)
+* `VehicleModel` (catálogo de modelos: marca, modelo, ano, motor, tipo de combustível, consumo de referência `km/l` para baseline de alertas)
 
 ### 3.4. Critérios de Aceitação (MC-MNT)
 * **CA-MNT-01:** Ao atualizar o odômetro do veículo via abastecimento ou checklist, o sistema recalcula imediatamente o saldo restante para as próximas revisões preventivas.
