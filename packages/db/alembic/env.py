@@ -1,4 +1,3 @@
-import asyncio
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -9,19 +8,12 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# Adicionar o diretório src ao path para importar manutcar_db
-src_path = Path(__file__).resolve().parents[1] / "src"
-sys.path.append(str(src_path))
+# Adiciona o diretório src ao path para importar manutcar_db
+sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
-try:
-    from manutcar_db.base import Base
-    from manutcar_db.session import _settings
-    import manutcar_db.models  # noqa: F401 - registra todos os modelos no Base.metadata
-except ImportError as e:
-    raise RuntimeError(
-        f"Erro ao importar módulos do manutcar_db. Verifique se o pacote está instalado "
-        f"ou se o PYTHONPATH inclui '{src_path}'. Erro original: {e}"
-    ) from e
+from manutcar_db.base import Base
+from manutcar_db.session import _settings as settings
+import manutcar_db.models  # noqa: F401 - importa todos os modelos para registrar no Base.metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -36,20 +28,29 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
+
 
 def get_url() -> str:
-    """Obtém a URL do banco de dados das configurações."""
-    try:
-        return _settings.async_database_url
-    except Exception as e:
-        raise RuntimeError(
-            "Falha ao obter DATABASE_URL. Verifique se a variável de ambiente "
-            "DATABASE_URL está definida no arquivo .env ou no ambiente."
-        ) from e
+    """Retorna a URL do banco de dados assíncrona a partir das configurações."""
+    return settings.async_database_url
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
+    """Run migrations in 'offline' mode.
+
+    This configures the context with just a URL
+    and not an Engine, though an Engine is acceptable
+    here as well.  By skipping the Engine creation
+    we don't even need a DBAPI to be available.
+
+    Calls to context.execute() here emit the given string to the
+    script output.
+
+    """
     url = get_url()
     context.configure(
         url=url,
@@ -75,12 +76,12 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    """In 'online' mode we need to create an Engine
+    """In this scenario we need to create an Engine
     and associate a connection with the context.
+
     """
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = get_url()
-    
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -95,6 +96,8 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+    import asyncio
+
     asyncio.run(run_async_migrations())
 
 
