@@ -26,9 +26,9 @@ async def _seed_actor(
         full_name=f"User {org_name}",
     )
     org = Organization(
-        clerk_org_id=f"org_{uuid.uuid4().hex[:12]}",
         name=org_name,
-        slug=slug,
+        document_number=f"{uuid.uuid4().int % 10**14:014d}",
+        is_personal_workspace=False,
     )
     db.add_all([user, org])
     await db.flush()
@@ -46,7 +46,7 @@ async def _seed_actor(
         organization=org,
         membership=member,
         clerk_user_id=user.clerk_user_id,
-        clerk_org_id=org.clerk_org_id,
+        clerk_org_id=f"org_{slug}_{uuid.uuid4().hex[:8]}",
     )
 
 

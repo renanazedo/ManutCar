@@ -77,9 +77,9 @@ class FleetService:
             organization_id=org_id,
             actor_user_id=actor.user.id,
             action=AuditAction.CREATE,
-            entity_type="VehicleOwner",
+            entity_name="VehicleOwner",
             entity_id=owner.id,
-            new_data={
+            new_values={
                 "owner_type": owner.owner_type,
                 "legal_name": owner.legal_name,
                 "document_number": owner.document_number,
@@ -125,9 +125,9 @@ class FleetService:
         await db.flush()
         await record_audit_log(
             db=db, organization_id=org_id, actor_user_id=actor.user.id,
-            action=AuditAction.UPDATE, entity_type="VehicleOwner", entity_id=owner.id,
-            old_data=old_data,
-            new_data={"legal_name": owner.legal_name, "user_id": str(owner.user_id) if owner.user_id else None},
+            action=AuditAction.UPDATE, entity_name="VehicleOwner", entity_id=owner.id,
+            old_values=old_data,
+            new_values={"legal_name": owner.legal_name, "user_id": str(owner.user_id) if owner.user_id else None},
         )
         return owner
 
@@ -157,8 +157,8 @@ class FleetService:
         await db.flush()
         await record_audit_log(
             db=db, organization_id=org_id, actor_user_id=actor.user.id,
-            action=AuditAction.CREATE, entity_type="Vehicle", entity_id=vehicle.id,
-            new_data={"plate": vehicle.plate, "current_odometer": vehicle.current_odometer, "owner_id": str(owner.id)},
+            action=AuditAction.CREATE, entity_name="Vehicle", entity_id=vehicle.id,
+            new_values={"plate": vehicle.plate, "current_odometer": vehicle.current_odometer, "owner_id": str(owner.id)},
         )
         return vehicle
 
@@ -216,10 +216,9 @@ class FleetService:
         await db.flush()
         await record_audit_log(
             db=db, organization_id=org_id, actor_user_id=actor.user.id,
-            action=AuditAction.UPDATE, entity_type="Vehicle", entity_id=vehicle.id,
-            old_data=old_data,
-            new_data={"brand": vehicle.brand, "model": vehicle.model, "status": vehicle.operational_status.value},
-            reason=payload.reason,
+            action=AuditAction.UPDATE, entity_name="Vehicle", entity_id=vehicle.id,
+            old_values=old_data,
+            new_values={"brand": vehicle.brand, "model": vehicle.model, "status": vehicle.operational_status.value},
         )
         return vehicle
 
@@ -231,7 +230,7 @@ class FleetService:
         vehicle = await FleetService.get_vehicle(db, actor, vehicle_id)
         if payload.new_odometer.__lt__(vehicle.current_odometer):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Od?metro monot?nico violado: {payload.new_odometer} inferior a {vehicle.current_odometer}.",
             )
         old_odo = vehicle.current_odometer
@@ -239,9 +238,8 @@ class FleetService:
         await db.flush()
         await record_audit_log(
             db=db, organization_id=org_id, actor_user_id=actor.user.id,
-            action=AuditAction.UPDATE, entity_type="Vehicle", entity_id=vehicle.id,
-            old_data={"current_odometer": old_odo}, new_data={"current_odometer": vehicle.current_odometer},
-            reason=payload.reason or "Atualiza??o de od?metro",
+            action=AuditAction.UPDATE, entity_name="Vehicle", entity_id=vehicle.id,
+            old_values={"current_odometer": old_odo}, new_values={"current_odometer": vehicle.current_odometer},
         )
         return vehicle
 
@@ -253,7 +251,7 @@ class FleetService:
         vehicle = await FleetService.get_vehicle(db, actor, vehicle_id)
         new_owner = await FleetService.get_owner(db, actor, payload.new_owner_id)
         if vehicle.current_owner_id == new_owner.id:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Mesmo propriet?rio.")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Mesmo propriet?rio.")
         dt = payload.transfer_date or _utcnow()
         prev_id = vehicle.current_owner_id
         open_hist = await db.scalar(
@@ -269,10 +267,9 @@ class FleetService:
         await db.flush()
         await record_audit_log(
             db=db, organization_id=org_id, actor_user_id=actor.user.id,
-            action=AuditAction.UPDATE, entity_type="Vehicle", entity_id=vehicle.id,
-            old_data={"current_owner_id": str(prev_id) if prev_id else None},
-            new_data={"current_owner_id": str(new_owner.id)},
-            reason=payload.reason or "Transfer?ncia de propriedade",
+            action=AuditAction.UPDATE, entity_name="Vehicle", entity_id=vehicle.id,
+            old_values={"current_owner_id": str(prev_id) if prev_id else None},
+            new_values={"current_owner_id": str(new_owner.id)},
         )
         return vehicle
 
@@ -307,8 +304,8 @@ class FleetService:
         await db.flush()
         await record_audit_log(
             db=db, organization_id=org_id, actor_user_id=actor.user.id,
-            action=AuditAction.CREATE, entity_type="VehicleManagementAgreement", entity_id=agr.id,
-            new_data={"vehicle_id": str(vehicle.id), "owner_id": str(owner.id), "status": agr.status.value},
+            action=AuditAction.CREATE, entity_name="VehicleManagementAgreement", entity_id=agr.id,
+            new_values={"vehicle_id": str(vehicle.id), "owner_id": str(owner.id), "status": agr.status.value},
         )
         return agr
 
@@ -344,7 +341,6 @@ class FleetService:
         await db.flush()
         await record_audit_log(
             db=db, organization_id=org_id, actor_user_id=actor.user.id,
-            action=AuditAction.UPDATE, entity_type="VehicleManagementAgreement", entity_id=agr.id,
-            old_data={"status": old_st}, new_data={"status": agr.status.value}, reason=payload.reason,
+            action=AuditAction.UPDATE, entity_name="VehicleManagementAgreement", entity_id=agr.id,
         )
         return agr

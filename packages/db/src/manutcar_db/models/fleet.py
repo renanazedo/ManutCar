@@ -58,7 +58,7 @@ class VehicleOwner(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
     document_number: Mapped[str] = mapped_column(
         String(18),
         nullable=False,
-        index=True,
+    #    index=True,
         comment="CPF ou CNPJ do proprietário",
     )
 
@@ -100,21 +100,21 @@ class Vehicle(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         String(10),
         unique=True,
         nullable=False,
-        index=True,
+     #   index=True,
         comment="Placa do veículo (formato Mercosul ou antigo)",
     )
     renavam: Mapped[Optional[str]] = mapped_column(
         String(11),
         unique=True,
         nullable=True,
-        index=True,
+    #    index=True,
         comment="RENAVAM do veículo",
     )
     chassis: Mapped[Optional[str]] = mapped_column(
         String(17),
         unique=True,
         nullable=True,
-        index=True,
+    #    index=True,
         comment="Chassi do veículo",
     )
     brand: Mapped[str] = mapped_column(
