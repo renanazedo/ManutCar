@@ -4,7 +4,7 @@ import sharedConfig from '@manutcar/config/tailwind.config';
 const config: Config = {
   ...sharedConfig,
   content: [
-    ...(sharedConfig.content || []),
+    ...(Array.isArray(sharedConfig.content) ? sharedConfig.content : sharedConfig.content?.files ?? []),
     './src/**/*.{ts,tsx}',
   ],
 };

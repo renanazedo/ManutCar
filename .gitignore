@@ -78,3 +78,7 @@ bkp/
 audit_*.txt
 
 manutcar-site/
+
+# PWA generated service worker
+apps/web/public/sw.js
+apps/web/public/workbox-*.js

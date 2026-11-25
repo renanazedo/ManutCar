@@ -20,7 +20,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@manutcar/ui/*": ["../../packages/ui/src/*"],
-      "@manutcar/schemas/*": ["../../packages/schemas/src/*"]
+      "@manutcar/schemas/*": ["../../packages/schemas/src/*"],
+      "@manutcar/config/*": ["../../packages/config/*"]
     },
     "baseUrl": "."
   },

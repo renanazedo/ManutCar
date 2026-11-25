@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ClerkProvider } from '@clerk/nextjs';
-import { ReactNode, useState } from 'react';
-import { Toaster } from '@manutcar/ui/toaster';
+import { ReactNode } from 'react';
+import { Providers } from '@/components/providers';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -25,20 +24,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-function getQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000,
-        refetchOnWindowFocus: false,
-        retry: 1,
-      },
-    },
-  });
-}
-
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(getQueryClient);
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
   if (!publishableKey) {
@@ -64,10 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`${inter.className} antialiased bg-background text-foreground`}>
         <ClerkProvider publishableKey={publishableKey}>
-          <QueryClientProvider client={queryClient}>
-            {children}
-            <Toaster />
-          </QueryClientProvider>
+          <Providers>{children}</Providers>
         </ClerkProvider>
       </body>
     </html>
