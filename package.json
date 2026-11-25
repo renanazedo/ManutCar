@@ -1,44 +1,16 @@
 {
-  "name": "@manutcar/web",
+  "name": "manutcar",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "db:generate": "echo 'web db generate not applicable'",
-    "db:migrate": "echo 'web db migrate not applicable'",
-    "db:upgrade": "echo 'web db upgrade not applicable'"
-  },
-  "dependencies": {
-    "next": "14.2.35",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@clerk/nextjs": "^5.7.0",
-    "@manutcar/ui": "workspace:*",
-    "@manutcar/schemas": "workspace:*"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test"
   },
   "devDependencies": {
-    "typescript": "^5.6.0",
-    "@types/node": "^22.0.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "14.2.35",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.38",
-    "autoprefixer": "^10.4.19",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "prettier": "^3.2.0",
-    "prettier-plugin-tailwindcss": "^0.5.0",
-    "vitest": "^1.5.0",
-    "@testing-library/react": "^14.2.0",
-    "@testing-library/jest-dom": "^6.4.0",
-    "jsdom": "^24.0.0",
-    "@ducanh2912/next-pwa": "^10.2.0"
+    "turbo": "^2.5.0"
   }
 }
