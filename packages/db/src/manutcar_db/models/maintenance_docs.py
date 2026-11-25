@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
@@ -286,6 +286,10 @@ class WorkOrderItem(UUIDMixin, TimestampMixin, Base):
     )
 
     work_order: Mapped["WorkOrder"] = relationship(back_populates="items", lazy="raise")
+
+    @property
+    def total_price(self) -> Decimal:
+        return (self.quantity * self.unit_price).quantize(Decimal("0.01"))
 
     def __repr__(self) -> str:
         return f"<WorkOrderItem(id={self.id}, work_order_id={self.work_order_id}, item_type={self.item_type!r})>"
