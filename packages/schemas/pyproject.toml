@@ -78,3 +78,6 @@ markers = [
     "unit: Unit tests",
     "integration: Integration tests",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/manutcar"]
