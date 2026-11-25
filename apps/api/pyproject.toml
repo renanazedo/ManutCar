@@ -37,6 +37,9 @@ dev = [
     "types-passlib>=1.7.4.20240106",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
 [tool.uv]
 dev-dependencies = [
     "pytest>=8.1.0",
