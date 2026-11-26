@@ -2,12 +2,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import HTTPException, status
-from sqlalchemy import and_, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from apps.api.app.core.security import AuthContext
 from apps.api.app.services.audit import record_audit_log
+from fastapi import HTTPException, status
 from manutcar.schemas.fleet import (
     VehicleCreate,
     VehicleManagementAgreementCreate,
@@ -18,13 +15,15 @@ from manutcar.schemas.fleet import (
     VehicleTransferOwnership,
     VehicleUpdate,
 )
-from manutcar_db.enums import AgreementStatus, AuditAction
+from manutcar_db.enums import AgreementStatus, AuditAction, OrgRole
 from manutcar_db.models.fleet import (
     Vehicle,
     VehicleManagementAgreement,
     VehicleOwner,
     VehicleOwnershipHistory,
 )
+from sqlalchemy import and_, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def _utcnow() -> datetime:
@@ -176,6 +175,11 @@ class FleetService:
                     VehicleManagementAgreement.deleted_at.is_(None),
                 ),
             )
+            .join(VehicleOwner, Vehicle.current_owner_id == VehicleOwner.id)
+            .where(
+                VehicleOwner.organization_id == org_id,
+                VehicleOwner.deleted_at.is_(None),
+            )
             .where(Vehicle.deleted_at.is_(None))
             .order_by(Vehicle.plate.asc())
         )
@@ -195,7 +199,13 @@ class FleetService:
                     VehicleManagementAgreement.deleted_at.is_(None),
                 ),
             )
-            .where(Vehicle.id == vehicle_id, Vehicle.deleted_at.is_(None))
+            .join(VehicleOwner, Vehicle.current_owner_id == VehicleOwner.id)
+            .where(
+                Vehicle.id == vehicle_id,
+                Vehicle.deleted_at.is_(None),
+                VehicleOwner.organization_id == org_id,
+                VehicleOwner.deleted_at.is_(None),
+            )
         )
         vehicle = await db.scalar(stmt)
         if vehicle is None:
@@ -264,6 +274,35 @@ class FleetService:
             open_hist.end_date = dt
         db.add(VehicleOwnershipHistory(vehicle_id=vehicle.id, owner_id=new_owner.id, start_date=dt, end_date=None))
         vehicle.current_owner_id = new_owner.id
+        agreements = list(
+            (
+                await db.scalars(
+                    select(VehicleManagementAgreement).where(
+                        VehicleManagementAgreement.vehicle_id == vehicle.id,
+                        VehicleManagementAgreement.owner_id != new_owner.id,
+                        VehicleManagementAgreement.organization_id != new_owner.organization_id,
+                        VehicleManagementAgreement.status.in_(
+                            (AgreementStatus.PENDING, AgreementStatus.ACTIVE)
+                        ),
+                        VehicleManagementAgreement.deleted_at.is_(None),
+                    )
+                )
+            ).all()
+        )
+        for agreement in agreements:
+            old_status = agreement.status.value
+            agreement.status = AgreementStatus.REVOKED
+            agreement.end_date = dt
+            await record_audit_log(
+                db=db,
+                organization_id=agreement.organization_id,
+                actor_user_id=actor.user.id,
+                action=AuditAction.REVOKE,
+                entity_name="VehicleManagementAgreement",
+                entity_id=agreement.id,
+                old_values={"status": old_status},
+                new_values={"status": agreement.status.value, "end_date": dt.isoformat()},
+            )
         await db.flush()
         await record_audit_log(
             db=db, organization_id=org_id, actor_user_id=actor.user.id,
@@ -282,11 +321,42 @@ class FleetService:
     @staticmethod
     async def create_agreement(db: AsyncSession, actor: AuthContext, payload: VehicleManagementAgreementCreate) -> VehicleManagementAgreement:
         org_id = _require_org_id(actor)
-        owner = await FleetService.get_owner(db, actor, payload.owner_id)
         vehicle = await db.scalar(select(Vehicle).where(Vehicle.id == payload.vehicle_id, Vehicle.deleted_at.is_(None)))
         if vehicle is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ve?culo n?o encontrado.")
-        if payload.status == AgreementStatus.ACTIVE:
+        owner = await db.scalar(
+            select(VehicleOwner).where(
+                VehicleOwner.id == vehicle.current_owner_id,
+                VehicleOwner.deleted_at.is_(None),
+            )
+        )
+        if owner is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ve?culo sem propriet?rio ativo.")
+        if owner.id != payload.owner_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="O propriet?rio informado n?o corresponde ao propriet?rio atual do ve?culo.",
+            )
+
+        cross_org = owner.organization_id != org_id
+        if cross_org and owner.owner_type not in ("PF", "PJ"):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Tipo de propriet?rio inv?lido para consentimento entre organiza??es.",
+            )
+        if cross_org and owner.owner_type == "PF" and owner.user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="O propriet?rio PF precisa estar associado a um usu?rio para consentir.",
+            )
+        if cross_org and owner.owner_type == "PJ" and owner.organization_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="O propriet?rio PJ precisa estar associado a uma organiza??o para consentir.",
+            )
+
+        agreement_status = AgreementStatus.PENDING if cross_org else payload.status
+        if agreement_status == AgreementStatus.ACTIVE:
             active = await db.scalar(
                 select(VehicleManagementAgreement).where(
                     VehicleManagementAgreement.vehicle_id == vehicle.id,
@@ -298,7 +368,7 @@ class FleetService:
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ve?culo j? possui acordo ativo.")
         agr = VehicleManagementAgreement(
             vehicle_id=vehicle.id, organization_id=org_id, owner_id=owner.id,
-            status=payload.status, start_date=payload.start_date, end_date=payload.end_date,
+            status=agreement_status, start_date=payload.start_date, end_date=payload.end_date,
         )
         db.add(agr)
         await db.flush()
@@ -308,6 +378,150 @@ class FleetService:
             new_values={"vehicle_id": str(vehicle.id), "owner_id": str(owner.id), "status": agr.status.value},
         )
         return agr
+
+    @staticmethod
+    async def list_pending_agreement_consents(
+        db: AsyncSession, actor: AuthContext
+    ) -> list[VehicleManagementAgreement]:
+        owner_conditions = [
+            and_(
+                VehicleOwner.owner_type == "PF",
+                VehicleOwner.user_id == actor.user.id,
+            )
+        ]
+        if actor.membership.role == OrgRole.ADMIN:
+            owner_conditions.append(
+                and_(
+                    VehicleOwner.owner_type == "PJ",
+                    VehicleOwner.organization_id == actor.organization.id,
+                )
+            )
+
+        stmt = (
+            select(VehicleManagementAgreement)
+            .join(VehicleOwner, VehicleManagementAgreement.owner_id == VehicleOwner.id)
+            .join(Vehicle, VehicleManagementAgreement.vehicle_id == Vehicle.id)
+            .where(
+                VehicleManagementAgreement.status == AgreementStatus.PENDING,
+                VehicleManagementAgreement.deleted_at.is_(None),
+                VehicleOwner.deleted_at.is_(None),
+                Vehicle.deleted_at.is_(None),
+                Vehicle.current_owner_id == VehicleOwner.id,
+                or_(
+                    VehicleOwner.organization_id.is_(None),
+                    VehicleManagementAgreement.organization_id != VehicleOwner.organization_id,
+                ),
+                or_(*owner_conditions),
+            )
+            .order_by(VehicleManagementAgreement.created_at.desc())
+        )
+        return list((await db.scalars(stmt)).all())
+
+    @staticmethod
+    async def _get_agreement_owner(
+        db: AsyncSession, agreement: VehicleManagementAgreement
+    ) -> VehicleOwner:
+        owner = await db.scalar(
+            select(VehicleOwner).where(
+                VehicleOwner.id == agreement.owner_id,
+                VehicleOwner.deleted_at.is_(None),
+            )
+        )
+        if owner is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Propriet?rio do acordo indispon?vel.")
+        return owner
+
+    @staticmethod
+    def _require_agreement_owner_authority(actor: AuthContext, owner: VehicleOwner) -> None:
+        is_pf_owner = owner.owner_type == "PF" and owner.user_id == actor.user.id
+        is_pj_admin = (
+            owner.owner_type == "PJ"
+            and owner.organization_id == actor.organization.id
+            and actor.membership.role == OrgRole.ADMIN
+        )
+        if not (is_pf_owner or is_pj_admin):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Somente o propriet?rio PF ou um ADMIN da organiza??o propriet?ria pode consentir.",
+            )
+
+    @staticmethod
+    async def consent_to_agreement(
+        db: AsyncSession, actor: AuthContext, agreement_id: uuid.UUID
+    ) -> VehicleManagementAgreement:
+        agreement = await db.scalar(
+            select(VehicleManagementAgreement).where(
+                VehicleManagementAgreement.id == agreement_id,
+                VehicleManagementAgreement.deleted_at.is_(None),
+            )
+        )
+        if agreement is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Acordo n?o encontrado.")
+        owner = await FleetService._get_agreement_owner(db, agreement)
+        FleetService._require_agreement_owner_authority(actor, owner)
+        if agreement.organization_id == owner.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Este acordo n?o exige consentimento entre organiza??es.",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "A concess?o de acesso entre organiza??es est? indispon?vel "
+                "at? a defini??o e implementa??o dos escopos granulares."
+            ),
+        )
+
+    @staticmethod
+    async def revoke_agreement_consent(
+        db: AsyncSession, actor: AuthContext, agreement_id: uuid.UUID
+    ) -> VehicleManagementAgreement:
+        agreement = await db.scalar(
+            select(VehicleManagementAgreement).where(
+                VehicleManagementAgreement.id == agreement_id,
+                VehicleManagementAgreement.deleted_at.is_(None),
+            )
+        )
+        if agreement is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Acordo n?o encontrado.")
+        owner = await FleetService._get_agreement_owner(db, agreement)
+        FleetService._require_agreement_owner_authority(actor, owner)
+        if agreement.organization_id == owner.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Este acordo n?o exige consentimento entre organiza??es.",
+            )
+        if agreement.status not in (AgreementStatus.PENDING, AgreementStatus.ACTIVE):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Somente acordos pendentes ou ativos podem ser recusados/revogados.",
+            )
+
+        old_status = agreement.status.value
+        now = _utcnow()
+        agreement.status = AgreementStatus.REVOKED
+        agreement.end_date = now
+        if agreement.consented_at is not None:
+            agreement.consent_revoked_at = now
+        await db.flush()
+        await record_audit_log(
+            db=db,
+            organization_id=owner.organization_id,
+            actor_user_id=actor.user.id,
+            action=AuditAction.REVOKE,
+            entity_name="VehicleManagementAgreement",
+            entity_id=agreement.id,
+            old_values={"status": old_status},
+            new_values={
+                "status": agreement.status.value,
+                "consent_revoked_at": (
+                    agreement.consent_revoked_at.isoformat()
+                    if agreement.consent_revoked_at is not None
+                    else None
+                ),
+            },
+        )
+        return agreement
 
     @staticmethod
     async def list_agreements(db: AsyncSession, actor: AuthContext, vehicle_id: Optional[uuid.UUID] = None) -> list[VehicleManagementAgreement]:
@@ -332,6 +546,27 @@ class FleetService:
         )
         if agr is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Acordo n?o encontrado.")
+        owner = await FleetService._get_agreement_owner(db, agr)
+        if owner.organization_id != org_id:
+            if payload.status == AgreementStatus.ACTIVE:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Acordos entre organiza??es s? podem ser ativados pelo consentimento do propriet?rio.",
+                )
+            if payload.status == AgreementStatus.PENDING and agr.status != AgreementStatus.PENDING:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Acordos encerrados n?o podem voltar ao estado pendente.",
+                )
+            if (
+                payload.status in (AgreementStatus.REVOKED, AgreementStatus.EXPIRED)
+                and agr.status in (AgreementStatus.REVOKED, AgreementStatus.EXPIRED)
+                and payload.status != agr.status
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Acordos encerrados n?o podem mudar para outro estado terminal.",
+                )
         old_st = agr.status.value
         agr.status = payload.status
         if payload.end_date is not None:
@@ -342,5 +577,7 @@ class FleetService:
         await record_audit_log(
             db=db, organization_id=org_id, actor_user_id=actor.user.id,
             action=AuditAction.UPDATE, entity_name="VehicleManagementAgreement", entity_id=agr.id,
+            old_values={"status": old_st},
+            new_values={"status": agr.status.value},
         )
         return agr

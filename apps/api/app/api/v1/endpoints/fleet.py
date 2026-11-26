@@ -1,12 +1,14 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from apps.api.app.core.security import AuthContext, get_current_auth_context, require_roles
+from apps.api.app.core.security import (
+    AuthContext,
+    get_current_auth_context,
+    require_roles,
+)
 from apps.api.app.db.session import get_db
 from apps.api.app.services.fleet_service import FleetService
+from fastapi import APIRouter, Depends, Query, status
 from manutcar.schemas.fleet import (
     VehicleCreate,
     VehicleManagementAgreementCreate,
@@ -15,13 +17,14 @@ from manutcar.schemas.fleet import (
     VehicleOdometerUpdate,
     VehicleOwnerCreate,
     VehicleOwnerResponse,
-    VehicleOwnerUpdate,
     VehicleOwnershipHistoryResponse,
+    VehicleOwnerUpdate,
     VehicleResponse,
     VehicleTransferOwnership,
     VehicleUpdate,
 )
 from manutcar_db.enums import OrgRole
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/fleet", tags=["Fleet (MC-FLT)"])
 
@@ -166,6 +169,47 @@ async def list_agreements(
     actor: AuthContext = Depends(get_current_auth_context),
 ):
     return await FleetService.list_agreements(db, actor, vehicle_id)
+
+
+@router.get(
+    "/agreements/pending-consent",
+    response_model=list[VehicleManagementAgreementResponse],
+)
+async def list_pending_agreement_consents(
+    db: AsyncSession = Depends(get_db),
+    actor: AuthContext = Depends(get_current_auth_context),
+):
+    return await FleetService.list_pending_agreement_consents(db, actor)
+
+
+@router.post(
+    "/agreements/{agreement_id}/consent",
+    response_model=VehicleManagementAgreementResponse,
+)
+async def consent_to_agreement(
+    agreement_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    actor: AuthContext = Depends(get_current_auth_context),
+):
+    agreement = await FleetService.consent_to_agreement(db, actor, agreement_id)
+    await db.commit()
+    await db.refresh(agreement)
+    return agreement
+
+
+@router.delete(
+    "/agreements/{agreement_id}/consent",
+    response_model=VehicleManagementAgreementResponse,
+)
+async def revoke_agreement_consent(
+    agreement_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    actor: AuthContext = Depends(get_current_auth_context),
+):
+    agreement = await FleetService.revoke_agreement_consent(db, actor, agreement_id)
+    await db.commit()
+    await db.refresh(agreement)
+    return agreement
 
 
 @router.patch("/agreements/{agreement_id}/status", response_model=VehicleManagementAgreementResponse)

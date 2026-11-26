@@ -3,12 +3,8 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from fastapi import HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
 from apps.api.app.services.audit import record_audit_log
+from fastapi import HTTPException, status
 from manutcar.schemas.maintenance import (
     MaintenancePlanCreate,
     MaintenanceRequestCreate,
@@ -27,7 +23,7 @@ from manutcar_db.enums import (
     VehicleOperationalStatus,
     WorkOrderStatus,
 )
-from manutcar_db.models.fleet import Vehicle, VehicleManagementAgreement
+from manutcar_db.models.fleet import Vehicle, VehicleManagementAgreement, VehicleOwner
 from manutcar_db.models.maintenance_docs import (
     MaintenancePlan,
     MaintenanceRequest,
@@ -36,6 +32,9 @@ from manutcar_db.models.maintenance_docs import (
     WorkOrder,
     WorkOrderItem,
 )
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 OS_ATTACHMENT_THRESHOLD = Decimal("500.00")
 PREVENTIVE_ALERT_KM_MARGIN = 1000
@@ -94,11 +93,16 @@ async def _ensure_vehicle_access(
         )
 
     agreement = await db.scalar(
-        select(VehicleManagementAgreement).where(
+        select(VehicleManagementAgreement)
+        .join(Vehicle, VehicleManagementAgreement.vehicle_id == Vehicle.id)
+        .join(VehicleOwner, Vehicle.current_owner_id == VehicleOwner.id)
+        .where(
             VehicleManagementAgreement.vehicle_id == vehicle_id,
             VehicleManagementAgreement.organization_id == org_id,
             VehicleManagementAgreement.status == AgreementStatus.ACTIVE,
             VehicleManagementAgreement.deleted_at.is_(None),
+            VehicleOwner.organization_id == org_id,
+            VehicleOwner.deleted_at.is_(None),
         )
     )
     if agreement is None:

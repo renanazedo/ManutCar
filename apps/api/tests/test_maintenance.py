@@ -2,16 +2,20 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from apps.api.app.core.security import AuthContext, get_current_auth_context
 from apps.api.app.main import app
-from manutcar_db.enums import AgreementStatus, FuelType, OrgRole, VehicleOperationalStatus
+from httpx import AsyncClient
+from manutcar_db.enums import (
+    AgreementStatus,
+    FuelType,
+    OrgRole,
+    VehicleOperationalStatus,
+)
 from manutcar_db.models.finance_audit import AuditLog
 from manutcar_db.models.fleet import Vehicle, VehicleManagementAgreement, VehicleOwner
 from manutcar_db.models.identity import Organization, OrganizationMember, User
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def _seed_org_and_vehicle(
@@ -46,6 +50,9 @@ async def _seed_org_and_vehicle(
         legal_name=f"Proprietário {org_name}",
         document_number=org.document_number,
     )
+    db.add_all([member, owner])
+    await db.flush()
+
     vehicle = Vehicle(
         plate=plate,
         brand="Fiat",
@@ -54,8 +61,9 @@ async def _seed_org_and_vehicle(
         year_model=2024,
         fuel_type=FuelType.GASOLINE,
         current_odometer=odometer,
+        current_owner_id=owner.id,
     )
-    db.add_all([member, owner, vehicle])
+    db.add(vehicle)
     await db.flush()
 
     agreement = VehicleManagementAgreement(
@@ -103,7 +111,7 @@ async def test_maintenance_preventive_schedule_and_traffic_light(
                 "last_executed_at": datetime.now(timezone.utc).isoformat(),
             },
         )
-        assert sched_res.status_code == 201
+        assert sched_res.status_code == 201, sched_res.text
         body = sched_res.json()
         assert body["next_due_km"] == 20000
         assert body["traffic_light"] == "DUE_SOON"
@@ -149,7 +157,7 @@ async def test_work_order_lifecycle_attachment_warranty_rbac_and_isolation(
             "/api/v1/maintenance/requests",
             json={"vehicle_id": str(vehicle.id), "description": "Barulho no freio dianteiro"},
         )
-        assert req_res.status_code == 201
+        assert req_res.status_code == 201, req_res.text
         req_id = req_res.json()["id"]
 
         forbidden_wo = await ac.post(

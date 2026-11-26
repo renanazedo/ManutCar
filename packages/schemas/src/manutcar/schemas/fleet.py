@@ -3,9 +3,8 @@ import uuid
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
 from manutcar_db.enums import AgreementStatus, FuelType, VehicleOperationalStatus
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 _PLATE_RE = re.compile(r"^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$")
 _DIGITS_RE = re.compile(r"\D")
@@ -191,5 +190,8 @@ class VehicleManagementAgreementResponse(BaseModel):
     status: AgreementStatus
     start_date: datetime
     end_date: Optional[datetime]
+    consented_by_user_id: Optional[uuid.UUID]
+    consented_at: Optional[datetime]
+    consent_revoked_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
