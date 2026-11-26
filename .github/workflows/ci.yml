@@ -56,6 +56,8 @@ jobs:
 
       - name: Run Tests (Backend)
         run: cd apps/api && uv run pytest -v --tb=short
+        env:
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
 
       - name: Run Tests (Frontend)
         run: cd apps/web && pnpm test --if-present
