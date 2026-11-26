@@ -10,20 +10,19 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copiar pacotes do monorepo (para resolver path dependencies)
-COPY packages/db /packages/db
-COPY packages/schemas /packages/schemas
+# Preservar a estrutura do monorepo usada pelas dependências locais em apps/api/pyproject.toml
+COPY packages/db ./packages/db
+COPY packages/schemas ./packages/schemas
+COPY apps/api/pyproject.toml apps/api/uv.lock apps/api/README.md ./apps/api/
 
-# Copiar pyproject.toml e uv.lock do apps/api
-COPY apps/api/pyproject.toml apps/api/uv.lock* ./
+WORKDIR /app/apps/api
 
-# Rodar uv sync (agora os paths ../../packages/* existem)
 RUN uv sync --frozen --no-dev --no-install-project
 
-# Copiar o código da API
+# Copiar o código da API após resolver o lockfile
 COPY apps/api/app ./app
 
-# Instalar o pacote local
+# Instalar o pacote local da API
 RUN uv pip install --no-deps .
 
 # STAGE 2: Runtime
@@ -37,8 +36,8 @@ WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
 
-COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
-COPY --from=builder --chown=appuser:appuser /app/app /app/app
+COPY --from=builder --chown=appuser:appuser /app/apps/api/.venv /app/.venv
+COPY --from=builder --chown=appuser:appuser /app/apps/api/app /app/app
 
 USER appuser
 
