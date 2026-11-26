@@ -29,7 +29,7 @@ dependencies = [
     "manutcar-schemas",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.1.0",
     "pytest-asyncio>=0.23.0",
@@ -47,21 +47,12 @@ packages = ["app"]
 manutcar-db = { path = "../../packages/db", editable = false }
 manutcar-schemas = { path = "../../packages/schemas", editable = false }
 
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.1.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-cov>=4.1.0",
-    "httpx>=0.27.0",
-    "ruff>=0.4.0",
-    "mypy>=1.9.0",
-]
-
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-indent-style = "space"
-indent-width = 4
+exclude = [".venv", ".mypy_cache", ".ruff_cache", "dist", "build", "__pycache__", "migrations"]
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -84,7 +75,6 @@ ignore = [
     "TRY003", # avoid specifying long messages outside exceptions (too strict)
     "PLW0603", # global statement (used in lifespan)
 ]
-exclude = [".venv", ".mypy_cache", ".ruff_cache", "dist", "build", "__pycache__", "migrations"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -94,7 +84,6 @@ line-ending = "lf"
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
-import-headings = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCAL"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "ARG001", "ARG002"]
@@ -111,7 +100,7 @@ no_implicit_optional = true
 strict_equality = true
 show_error_codes = true
 pretty = true
-enable_error_code = ["ignore-without-action"]
+enable_error_code = ["ignore-without-code"]
 namespace_packages = true
 explicit_package_bases = true
 mypy_path = "."

@@ -11,6 +11,8 @@
     "test": "turbo run test"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19",
+    "@commitlint/config-conventional": "^19",
     "turbo": "^2.5.0"
   }
 }
