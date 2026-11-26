@@ -1,13 +1,12 @@
 import json
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from svix import Webhook, WebhookVerificationError
-
 from apps.api.app.core.config import settings
 from apps.api.app.db.session import get_db
 from apps.api.app.services.sync_service import process_clerk_webhook
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from svix import Webhook, WebhookVerificationError
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
@@ -81,11 +80,16 @@ async def clerk_webhook(
             detail="Header svix-id ausente",
         )
 
-    try:
-        result = await process_clerk_webhook(db, svix_id, event_type, data)
-        await db.commit()
-        return result
-    except Exception as e:
-        await db.rollback()
-        print(f"ERRO Webhook Clerk [{event_type}]: {e}")
-        return {"status": "error", "message": str(e)}
+    if not isinstance(event_type, str) or not event_type:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Campo 'type' ausente ou inválido no payload",
+        )
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Campo 'data' deve ser um objeto",
+        )
+
+    async with db.begin():
+        return await process_clerk_webhook(db, svix_id, event_type, data)

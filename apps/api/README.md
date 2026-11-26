@@ -41,3 +41,15 @@ ambiente de produção.
 
 Ruff e MyPy estão configurados para o desenvolvimento local. As checagens
 completas ainda encontram pendências existentes e não são gates do CI.
+
+## Webhooks Clerk
+
+IDs de usuários e organizações do Clerk são referências externas; as chaves
+primárias locais continuam sendo UUIDs. O ID externo da organização é guardado
+em `organizations.clerk_organization_id`, e memberships são associados
+resolvendo os IDs do Clerk para os registros locais.
+
+O processamento e o registro de idempotência do evento compartilham uma
+transação. Referências locais ainda não sincronizadas retornam `503` para que o
+Clerk possa tentar novamente; falhas inesperadas também não são respondidas
+como sucesso.

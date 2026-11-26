@@ -83,6 +83,13 @@ class User(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
 class Organization(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = "organizations"
 
+    clerk_organization_id: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        unique=True,
+        index=True,
+        nullable=True,
+        comment="ID da organização no Clerk",
+    )
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
