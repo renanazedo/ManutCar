@@ -30,14 +30,15 @@ FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:$PATH"
+    HOME=/tmp \
+    PATH="/app/apps/api/.venv/bin:$PATH"
 
 WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
 
-COPY --from=builder --chown=appuser:appuser /app/apps/api/.venv /app/.venv
-COPY --from=builder --chown=appuser:appuser /app/apps/api/app /app/app
+COPY --from=builder --chown=appuser:appuser /app/apps/api/.venv /app/apps/api/.venv
+COPY --from=builder --chown=appuser:appuser /app/apps/api/app /app/apps/api/app
 
 USER appuser
 

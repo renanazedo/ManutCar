@@ -1672,8 +1672,8 @@ requires-dist = [
     { name = "firebase-admin", specifier = ">=6.4.0" },
     { name = "gunicorn", specifier = ">=21.2.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27.0" },
-    { name = "manutcar-db", editable = "../../packages/db" },
-    { name = "manutcar-schemas", editable = "../../packages/schemas" },
+    { name = "manutcar-db", directory = "../../packages/db" },
+    { name = "manutcar-schemas", directory = "../../packages/schemas" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9.0" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.7.0" },
@@ -1708,7 +1708,7 @@ dev = [
 [[package]]
 name = "manutcar-db"
 version = "0.1.0"
-source = { editable = "../../packages/db" }
+source = { directory = "../../packages/db" }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
@@ -1742,7 +1742,7 @@ dev = [
 [[package]]
 name = "manutcar-schemas"
 version = "0.1.0"
-source = { editable = "../../packages/schemas" }
+source = { directory = "../../packages/schemas" }
 dependencies = [
     { name = "pydantic" },
     { name = "pydantic-extra-types" },

@@ -44,8 +44,8 @@ dev = [
 packages = ["app"]
 
 [tool.uv.sources]
-manutcar-db = { path = "../../packages/db", editable = true }
-manutcar-schemas = { path = "../../packages/schemas", editable = true }
+manutcar-db = { path = "../../packages/db", editable = false }
+manutcar-schemas = { path = "../../packages/schemas", editable = false }
 
 [tool.uv]
 dev-dependencies = [
