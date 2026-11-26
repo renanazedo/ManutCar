@@ -2,12 +2,9 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import HTTPException, status
-from sqlalchemy import and_, not_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from apps.api.app.core.security import AuthContext
 from apps.api.app.services.audit import record_audit_log
+from fastapi import HTTPException, status
 from manutcar.schemas.operations import (
     VehicleAssignmentClose,
     VehicleAssignmentCreate,
@@ -20,8 +17,11 @@ from manutcar_db.models.fleet import (
     VehicleAssignment,
     VehicleFinancialResponsibility,
     VehicleManagementAgreement,
+    VehicleOwner,
 )
 from manutcar_db.models.identity import OrganizationMember
+from sqlalchemy import and_, not_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def _utcnow() -> datetime:
@@ -57,7 +57,12 @@ async def _assert_vehicle_in_org(
                 VehicleManagementAgreement.deleted_at.is_(None),
             ),
         )
+        .join(VehicleOwner, Vehicle.current_owner_id == VehicleOwner.id)
         .where(Vehicle.id == vehicle_id, Vehicle.deleted_at.is_(None))
+        .where(
+            VehicleOwner.organization_id == org_id,
+            VehicleOwner.deleted_at.is_(None),
+        )
     )
     vehicle = await db.scalar(stmt)
     if vehicle is None:

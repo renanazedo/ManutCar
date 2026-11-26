@@ -10,9 +10,8 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
-    func,
 )
-from sqlalchemy.dialects.postgresql import NUMERIC, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from manutcar_db.base import Base, SoftDeleteMixin, TimestampMixin, UUIDMixin
@@ -278,6 +277,22 @@ class VehicleManagementAgreement(UUIDMixin, TimestampMixin, SoftDeleteMixin, Bas
         DateTime(timezone=True),
         nullable=True,
         comment="Data de fim do acordo (null = vigente)",
+    )
+    consented_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="ID do usuário que consentiu com o acordo",
+    )
+    consented_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Data/hora do consentimento do proprietário",
+    )
+    consent_revoked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Data/hora da revogação do consentimento",
     )
 
     # Relacionamentos

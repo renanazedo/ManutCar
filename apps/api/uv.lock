@@ -1640,17 +1640,6 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 
-[package.optional-dependencies]
-dev = [
-    { name = "httpx" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "types-passlib" },
-]
-
 [package.dev-dependencies]
 dev = [
     { name = "httpx" },
@@ -1659,6 +1648,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "types-passlib" },
 ]
 
 [package.metadata]
@@ -1671,29 +1661,21 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.110.0" },
     { name = "firebase-admin", specifier = ">=6.4.0" },
     { name = "gunicorn", specifier = ">=21.2.0" },
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27.0" },
     { name = "manutcar-db", directory = "../../packages/db" },
     { name = "manutcar-schemas", directory = "../../packages/schemas" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9.0" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.7.0" },
     { name = "pydantic-extra-types", specifier = ">=2.6.0" },
     { name = "pydantic-settings", specifier = ">=2.3.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.1.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-jose", extras = ["cryptography"], specifier = ">=3.3.0" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "resend", specifier = ">=0.10.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.29" },
     { name = "structlog", specifier = ">=26.1.0" },
     { name = "svix", specifier = ">=2.11.1" },
-    { name = "types-passlib", marker = "extra == 'dev'", specifier = ">=1.7.4.20240106" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.29.0" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1703,6 +1685,7 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
     { name = "pytest-cov", specifier = ">=4.1.0" },
     { name = "ruff", specifier = ">=0.4.0" },
+    { name = "types-passlib", specifier = ">=1.7.4.20240106" },
 ]
 
 [[package]]
@@ -1721,15 +1704,10 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "asyncpg", specifier = ">=0.29.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9.0" },
     { name = "pydantic-settings", specifier = ">=2.3.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.1.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.30" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1751,14 +1729,10 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9.0" },
     { name = "pydantic", specifier = ">=2.7.0" },
     { name = "pydantic-extra-types", specifier = ">=2.6.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.1.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [

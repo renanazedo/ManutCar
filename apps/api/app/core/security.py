@@ -1,42 +1,66 @@
 import uuid
 from dataclasses import dataclass
-from typing import Optional, List
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import select, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-import jwt
-from jwt import PyJWKClient
+from typing import Optional
 
+import jwt
 from apps.api.app.core.config import settings
 from apps.api.app.db.session import get_db
-from manutcar_db.models.identity import User, Organization, OrganizationMember
-from manutcar_db.models.fleet import Vehicle, VehicleManagementAgreement, VehicleAccessPermission
-from manutcar_db.enums import OrgRole, AgreementStatus, VehicleOperationalStatus
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jwt import PyJWKClient
+from manutcar_db.enums import AgreementStatus, OrgRole
+from manutcar_db.models.fleet import (
+    Vehicle,
+    VehicleAccessPermission,
+    VehicleManagementAgreement,
+    VehicleOwner,
+)
+from manutcar_db.models.identity import Organization, OrganizationMember, User
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def decode_clerk_jwt(token: str) -> dict:
     """
-    Decodifica e valida um JWT do Clerk usando RS256 via JWKS.
-    Valida claims básicos: exp, iat, sub.
+    Valida um JWT do Clerk usando RS256, JWKS e as claims configuradas.
     """
-    jwk_client = PyJWKClient(settings.CLERK_JWKS_URL)
-    signing_key = jwk_client.get_signing_key_from_jwt(token)
-    
-    payload = jwt.decode(
-        token,
-        signing_key.key,
-        algorithms=["RS256"],
-        audience=settings.CLERK_SECRET_KEY,
-        options={"verify_aud": False},
-    )
-    
-    if "sub" not in payload:
+    if not settings.CLERK_JWKS_URL or not settings.CLERK_JWT_ISSUER:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Autenticação Clerk não está configurada",
+        )
+
+    try:
+        jwk_client = PyJWKClient(settings.CLERK_JWKS_URL)
+        signing_key = jwk_client.get_signing_key_from_jwt(token)
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            issuer=settings.CLERK_JWT_ISSUER,
+            audience=settings.CLERK_JWT_AUDIENCE or None,
+            options={
+                "verify_aud": bool(settings.CLERK_JWT_AUDIENCE),
+                "require": ["exp", "iat", "sub", "iss"],
+            },
+        )
+    except jwt.PyJWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+        ) from exc
+
+    if not isinstance(payload.get("sub"), str) or not payload["sub"].strip():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido: claim 'sub' ausente",
         )
-    
+    if not settings.CLERK_JWT_AUDIENCE and payload.get("aud") is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token contém audience, mas CLERK_JWT_AUDIENCE não está configurada",
+        )
+
     return payload
 
 
@@ -59,10 +83,10 @@ async def get_current_auth_context(
     """
     token = credentials.credentials
     payload = decode_clerk_jwt(token)
-    
+
     clerk_user_id = payload.get("sub")
     clerk_org_id = payload.get("org_id")
-    
+
     user_result = await db.execute(
         select(User).where(
             User.clerk_user_id == clerk_user_id,
@@ -71,13 +95,13 @@ async def get_current_auth_context(
         )
     )
     user = user_result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuário não encontrado ou inativo",
         )
-    
+
     query = (
         select(OrganizationMember, Organization)
         .join(Organization, OrganizationMember.organization_id == Organization.id)
@@ -88,7 +112,7 @@ async def get_current_auth_context(
             Organization.deleted_at.is_(None),
         )
     )
-    
+
     if clerk_org_id:
         try:
             org_uuid = uuid.UUID(clerk_org_id)
@@ -97,18 +121,18 @@ async def get_current_auth_context(
             query = query.where(Organization.is_personal_workspace.is_(False))
     else:
         query = query.where(Organization.is_personal_workspace.is_(True))
-    
+
     result = await db.execute(query)
     row = result.first()
-    
+
     if not row:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Usuário não possui vínculo ativo com a organização",
         )
-    
+
     membership, organization = row
-    
+
     return AuthContext(
         user=user,
         organization=organization,
@@ -122,6 +146,7 @@ def require_roles(*allowed_roles: OrgRole):
     """
     Factory de dependency que verifica se o papel do membership está em allowed_roles.
     """
+
     async def role_checker(auth: AuthContext = Depends(get_current_auth_context)) -> AuthContext:
         if auth.membership.role not in allowed_roles:
             raise HTTPException(
@@ -129,7 +154,7 @@ def require_roles(*allowed_roles: OrgRole):
                 detail=f"Acesso restrito aos papéis: {[r.value for r in allowed_roles]}",
             )
         return auth
-    
+
     return role_checker
 
 
@@ -168,35 +193,39 @@ async def verify_vehicle_access(
         )
     )
     vehicle = vehicle_result.scalar_one_or_none()
-    
+
     if not vehicle:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Veículo não encontrado",
         )
-    
+
     owner_org_match = False
     if vehicle.current_owner and vehicle.current_owner.organization_id == auth.organization.id:
         owner_org_match = True
-    
+
+    if not owner_org_match:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organização não tem acesso a este veículo até a autorização granular estar disponível",
+        )
+
     agreement_result = await db.execute(
-        select(VehicleManagementAgreement).where(
+        select(VehicleManagementAgreement)
+        .join(VehicleOwner, VehicleManagementAgreement.owner_id == VehicleOwner.id)
+        .where(
             VehicleManagementAgreement.vehicle_id == vehicle.id,
             VehicleManagementAgreement.organization_id == auth.organization.id,
             VehicleManagementAgreement.status == AgreementStatus.ACTIVE,
             VehicleManagementAgreement.deleted_at.is_(None),
+            VehicleOwner.organization_id == auth.organization.id,
+            VehicleOwner.deleted_at.is_(None),
         )
     )
     agreement = agreement_result.scalar_one_or_none()
-    
+
     has_agreement = agreement is not None
-    
-    if not (owner_org_match or has_agreement):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Organização não tem acesso a este veículo",
-        )
-    
+
     if required_permission and has_agreement:
         perm_column = _get_permission_column(required_permission)
         perm_result = await db.execute(
@@ -206,11 +235,11 @@ async def verify_vehicle_access(
             )
         )
         permission = perm_result.scalar_one_or_none()
-        
+
         if not permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permissão '{required_permission}' não concedida para este veículo",
             )
-    
+
     return vehicle

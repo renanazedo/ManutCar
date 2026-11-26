@@ -1,11 +1,15 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
-from apps.api.app.core.config import settings
 from apps.api.app.api.v1.router import api_router
+from apps.api.app.core.config import settings
+from apps.api.app.db.session import get_db
 
 structlog.configure(
     processors=[
@@ -57,8 +61,26 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 @app.get("/api/v1/health", tags=["Health"], summary="Health Check")
-async def health_check():
-    return {"status": "ok", "service": "manutcar-api", "version": "0.1.0"}
+async def health_check(db: AsyncSession = Depends(get_db)):
+    try:
+        await db.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        logger.warning("database_health_check_failed")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unavailable",
+                "service": "manutcar-api",
+                "database": "unavailable",
+            },
+        )
+
+    return {
+        "status": "ok",
+        "service": "manutcar-api",
+        "version": "0.1.0",
+        "database": "ok",
+    }
 
 app.include_router(api_router, prefix="/api/v1")
 

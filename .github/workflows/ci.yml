@@ -15,7 +15,7 @@ env:
 
 jobs:
   check:
-    name: Check (Lint, Typecheck, Test)
+    name: Check (Frontend Quality, Backend Tests)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -46,12 +46,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install dependencies (Backend Python)
-        run: cd apps/api && uv sync --all-extras --frozen
+        run: cd apps/api && uv sync --locked
 
-      - name: Run Lint (All Workspaces)
+      - name: Run Lint (JavaScript Workspaces)
         run: pnpm lint
 
-      - name: Run Typecheck (All Workspaces)
+      - name: Run Typecheck (JavaScript Workspaces)
         run: pnpm typecheck
 
       - name: Run Tests (Backend)
@@ -60,7 +60,7 @@ jobs:
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
 
       - name: Run Tests (Frontend)
-        run: cd apps/web && pnpm test --if-present
+        run: cd apps/web && pnpm test
 
   docker-build-api:
     name: Docker Build API
