@@ -10,5 +10,11 @@
   },
   "dependencies": {
     "tailwindcss-animate": "^1.0.7"
+  },
+  "peerDependencies": {
+    "tailwindcss": ">=3.0.0 || insiders"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
   }
 }
