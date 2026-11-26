@@ -24,6 +24,9 @@ dependencies = [
     "firebase-admin>=6.4.0",
     "python-dotenv>=1.0.1",
     "structlog>=26.1.0",
+    "aiosqlite",
+    "manutcar-db",
+    "manutcar-schemas",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +42,10 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+[tool.uv.sources]
+manutcar-db = { path = "../../packages/db", editable = true }
+manutcar-schemas = { path = "../../packages/schemas", editable = true }
 
 [tool.uv]
 dev-dependencies = [
