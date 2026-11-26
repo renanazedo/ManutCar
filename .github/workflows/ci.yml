@@ -77,7 +77,7 @@ jobs:
       - name: Build API Docker Image (Load)
         uses: docker/build-push-action@v5
         with:
-          context: ./apps/api
+          context: .
           file: ./apps/api/Dockerfile
           push: false
           load: true

@@ -10,12 +10,20 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-COPY pyproject.toml uv.lock* ./
+# Copiar pacotes do monorepo (para resolver path dependencies)
+COPY packages/db /packages/db
+COPY packages/schemas /packages/schemas
 
+# Copiar pyproject.toml e uv.lock do apps/api
+COPY apps/api/pyproject.toml apps/api/uv.lock* ./
+
+# Rodar uv sync (agora os paths ../../packages/* existem)
 RUN uv sync --frozen --no-dev --no-install-project
 
-COPY ./app ./app
+# Copiar o código da API
+COPY apps/api/app ./app
 
+# Instalar o pacote local
 RUN uv pip install --no-deps .
 
 # STAGE 2: Runtime
